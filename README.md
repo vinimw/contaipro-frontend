@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Contaí Pro v2 Frontend
 
-## Getting Started
+Frontend do Contaí Pro v2 construído com Next.js 16, App Router, TypeScript, Tailwind CSS, React Hook Form, Zod, Axios, Recharts e Lucide.
 
-First, run the development server:
+## Requisitos
+
+- Node.js 20+
+- npm 10+
+- Backend rodando localmente em `http://127.0.0.1:8000`
+
+## Instalação
+
+```bash
+npm install
+```
+
+## Configuração
+
+1. Crie seu arquivo local de ambiente a partir do exemplo:
+
+```bash
+cp .env.local.example .env.local
+```
+
+2. Garanta que a variável esteja assim:
+
+```env
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000/api/v1
+```
+
+Importante:
+
+- Use `NEXT_PUBLIC_API_URL`
+- Não use `VITE_API_URL`
+
+## Rodando localmente
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```txt
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build de produção
 
-## Learn More
+```bash
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Como o frontend se conecta ao backend
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Backend base: `http://127.0.0.1:8000`
+- API: `http://127.0.0.1:8000/api/v1`
+- Swagger: `http://127.0.0.1:8000/docs`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+O client HTTP centralizado fica em `src/lib/api.ts`.
 
-## Deploy on Vercel
+Ele já:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- lê a base URL de `NEXT_PUBLIC_API_URL`
+- envia `Authorization: Bearer TOKEN`
+- limpa a sessão em `401`
+- redireciona para `/auth/login` quando a sessão expira
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Estrutura principal
+
+```txt
+src/
+  app/
+    auth/
+    app/
+  components/
+  hooks/
+  lib/
+  services/
+  types/
+```
+
+## Fluxo recomendado para testar
+
+1. Acesse `/auth/register`
+2. Faça o cadastro com nome, e-mail e telefone
+3. Confirme o e-mail com o token recebido
+4. Crie a senha em `/auth/set-password`
+5. Faça login em `/auth/login`
+6. Abra `/app/dashboard`
+7. Cadastre uma conta em `/app/bills/new`
+8. Marque um pagamento como pago no dashboard
+9. Crie um gasto rápido em `/app/expenses` ou pelo modal do dashboard
+10. Cadastre uma renda extra em `/app/income`
+11. Atualize nome ou senha em `/app/settings`
+
+## Funcionalidades entregues
+
+- Autenticação com cadastro, login, confirmação de e-mail e criação de senha
+- Rotas privadas com validação de sessão
+- Dashboard com cards, lista de pagamentos, gráfico e atalho para gasto rápido
+- Cadastro, edição e remoção de contas
+- Gestão de renda mensal e rendas extras
+- Gestão de gastos rápidos
+- Configurações de perfil e senha
+- Manifest PWA básico em `src/app/manifest.ts`
+
+## Observações
+
+- O token fica centralizado em helper para facilitar futura troca de `localStorage` para cookies/sessão mais segura.
+- O frontend não expõe secrets e só usa `NEXT_PUBLIC_API_URL` como variável pública.
+- Os ícones temporários do web app ficam em `public/icons`.
