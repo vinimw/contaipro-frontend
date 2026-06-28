@@ -56,15 +56,30 @@ export function BottomNavigation({
               <li key={href}>
                 <Link
                   href={href}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex h-14 flex-col items-center justify-center gap-1 text-[8px] font-bold uppercase leading-tight text-slate-500 transition",
-                    active && "text-[var(--color-primary-strong)]",
+                    "flex h-14 flex-col items-center justify-center gap-1 rounded-[10px] text-[8px] font-bold uppercase leading-tight transition",
+                    active
+                      ? "text-[var(--color-primary)]"
+                      : "text-slate-500 hover:bg-[var(--color-primary-soft)] hover:text-[#071a3d]",
                   )}
                 >
-                  <span className="inline-flex size-5 items-center justify-center">
-                    <Icon className="size-5" />
+                  <span
+                    className={cn(
+                      "inline-flex size-5 items-center justify-center transition",
+                      active && "text-[var(--color-primary)]",
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        "size-5",
+                        active && "text-[var(--color-primary)]",
+                      )}
+                    />
                   </span>
-                  <span>{label}</span>
+                  <span className={cn(active && "text-[var(--color-primary)]")}>
+                    {label}
+                  </span>
                 </Link>
               </li>
             </Fragment>
