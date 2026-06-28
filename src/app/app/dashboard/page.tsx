@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import {
   BadgeDollarSign,
   Banknote,
-  Bell,
   ChartNoAxesCombined,
   ChevronLeft,
   ChevronRight,
@@ -28,7 +27,6 @@ import {
   type QuickExpenseFormValues,
 } from "@/components/dashboard/QuickExpenseForm";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
-import { BrandLogo } from "@/components/layout/BrandLogo";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -215,19 +213,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 md:space-y-5">
       <section className="md:hidden">
-        <div className="flex items-start justify-between">
-          <div>
-            <BrandLogo className="w-32" />
-            <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-              Dashboard
-            </p>
-          </div>
-          <button className="inline-flex size-8 items-center justify-center rounded-[10px] bg-slate-100 text-slate-600">
-            <Bell className="size-4" />
-          </button>
-        </div>
-
-        <div className="mt-5">
+        <div>
           <h1 className="text-xl font-extrabold leading-tight text-slate-900">
             {formatMonthLabel(month)}
           </h1>
