@@ -38,11 +38,32 @@ const billSchema = z
       });
     }
 
+    if (values.bill_type === "fixed" && values.recurrence_type === "none") {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["recurrence_type"],
+        message: "Contas fixas precisam ter recorrencia mensal.",
+      });
+    }
+
     if (values.recurrence_type === "monthly_until_date" && !values.end_date) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["end_date"],
         message: "Informe a data final da recorrencia.",
+      });
+    }
+
+    if (
+      values.recurrence_type === "monthly_until_date" &&
+      values.end_date &&
+      values.start_month &&
+      values.end_date < `${values.start_month}-01`
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["end_date"],
+        message: "A data final nao pode ser anterior ao mes inicial.",
       });
     }
   });
@@ -86,13 +107,32 @@ export function BillForm({
 
   const billType = useWatch({ control, name: "bill_type" });
   const recurrenceType = useWatch({ control, name: "recurrence_type" });
+  const startMonth = useWatch({ control, name: "start_month" });
+  const endDate = useWatch({ control, name: "end_date" });
+  const minEndDate = startMonth ? `${startMonth}-01` : undefined;
 
   useEffect(() => {
     if (billType === "single") {
       setValue("recurrence_type", "none");
       setValue("end_date", "");
+      return;
     }
-  }, [billType, setValue]);
+
+    if (billType === "fixed" && recurrenceType === "none") {
+      setValue("recurrence_type", "monthly_forever");
+    }
+  }, [billType, recurrenceType, setValue]);
+
+  useEffect(() => {
+    if (
+      recurrenceType === "monthly_until_date" &&
+      minEndDate &&
+      endDate &&
+      endDate < minEndDate
+    ) {
+      setValue("end_date", "");
+    }
+  }, [endDate, minEndDate, recurrenceType, setValue]);
 
   async function submit(values: BillFormValues) {
     await onSubmit({
@@ -154,7 +194,7 @@ export function BillForm({
             error={errors.recurrence_type?.message}
             {...register("recurrence_type")}
           >
-            <option value="none">Nenhuma</option>
+            {billType === "single" ? <option value="none">Nenhuma</option> : null}
             <option value="monthly_forever">Mensal para sempre</option>
             <option value="monthly_until_date">Mensal ate data final</option>
           </Select>
@@ -162,6 +202,7 @@ export function BillForm({
             <Input
               label="Data final"
               type="date"
+              min={minEndDate}
               error={errors.end_date?.message}
               {...register("end_date")}
             />
