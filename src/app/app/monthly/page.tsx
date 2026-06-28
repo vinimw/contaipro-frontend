@@ -381,25 +381,25 @@ function MonthlyPageContent() {
                     : "border-white/80 bg-white",
                 )}
               >
-                <div className="grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-3 md:grid-cols-[40px_minmax(0,1fr)_auto] md:gap-3">
+                <div className="grid grid-cols-[42px_minmax(0,1fr)] items-center gap-3 md:grid-cols-[40px_minmax(0,1fr)_auto] md:gap-3">
                   <span
                     className={cn(
-                      "inline-flex size-[52px] shrink-0 items-center justify-center rounded-[10px] md:size-10 md:rounded-[10px]",
+                      "inline-flex size-[42px] shrink-0 items-center justify-center rounded-[10px] md:size-10 md:rounded-[10px]",
                       item.status ? iconClasses[item.status] : "bg-[var(--color-brand-blue-soft)] text-[var(--color-brand-blue)]",
                     )}
                   >
                     {item.item_type === "quick_expense" ? (
-                      <ShoppingBasket className="size-6 md:size-4.5" />
+                      <ShoppingBasket className="size-5 md:size-4.5" />
                     ) : item.status === "paid" ? (
-                      <CheckCircle2 className="size-7 md:size-5" />
+                      <CheckCircle2 className="size-5 md:size-5" />
                     ) : (
-                      <Clock3 className="size-6 md:size-4.5" />
+                      <Clock3 className="size-5 md:size-4.5" />
                     )}
                   </span>
 
                   <div className="min-w-0">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <h3 className="truncate text-xl font-semibold tracking-[-0.04em] text-slate-900 md:text-base md:leading-tight">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <h3 className="min-w-0 max-w-full break-words text-base font-semibold tracking-[-0.03em] text-slate-900 md:text-base md:leading-tight">
                         {item.name}
                       </h3>
                       <span
@@ -411,14 +411,14 @@ function MonthlyPageContent() {
                         {item.status ? statusLabel[item.status] : "Gasto"}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm font-medium text-slate-500 md:text-[0.72rem]">
+                    <p className="mt-1 text-xs font-medium text-slate-500 md:text-[0.72rem]">
                       {item.item_type === "bill_payment" ? "Vence" : "Data"}{" "}
                       {formatShortDate(item.occurrence_date)}
                     </p>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2">
-                    <p className="min-w-[104px] text-right text-xl font-extrabold tracking-[-0.04em] text-slate-900 md:min-w-[112px] md:text-lg md:leading-tight">
+                  <div className="col-span-2 flex shrink-0 items-center justify-between gap-2 pl-[54px] md:col-span-1 md:pl-0">
+                    <p className="text-lg font-extrabold tracking-[-0.04em] text-slate-900 md:min-w-[112px] md:text-right md:text-lg md:leading-tight">
                       {formatCurrencyBRL(item.amount)}
                     </p>
 
@@ -438,7 +438,7 @@ function MonthlyPageContent() {
                                 : `Confirmar pagamento de ${item.name}`
                             }
                             className={cn(
-                              "size-11 min-h-0 rounded-[10px] p-0 shadow-none md:size-8",
+                              "size-9 min-h-0 rounded-[10px] p-0 shadow-none md:size-8",
                               item.status === "paid"
                                 ? "bg-[var(--color-primary-soft)] text-[#8a6400] hover:bg-[#ffefb6]"
                                 : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
@@ -448,9 +448,9 @@ function MonthlyPageContent() {
                             onClick={() => void togglePaymentStatus(item)}
                           >
                             {item.status === "paid" ? (
-                              <RotateCcw className="size-5 md:size-3.5" />
+                              <RotateCcw className="size-4 md:size-3.5" />
                             ) : (
-                              <CheckCircle2 className="size-5 md:size-3.5" />
+                              <CheckCircle2 className="size-4 md:size-3.5" />
                             )}
                           </Button>
                         </ActionTooltip>
@@ -459,12 +459,12 @@ function MonthlyPageContent() {
                         <ActionTooltip label="Excluir gasto">
                           <Button
                             aria-label={`Excluir ${item.name}`}
-                            className="size-11 min-h-0 rounded-[10px] p-0 shadow-none md:size-8"
+                            className="size-9 min-h-0 rounded-[10px] p-0 shadow-none md:size-8"
                             disabled={isDeletingItem && itemToDelete?.id === item.id}
                             variant="danger"
                             onClick={() => setItemToDelete(item)}
                           >
-                            <Trash2 className="size-5 md:size-3.5" />
+                            <Trash2 className="size-4 md:size-3.5" />
                           </Button>
                         </ActionTooltip>
                       ) : null}
