@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { Bell, LogOut } from "lucide-react";
 
+import { BrandLogo } from "@/components/layout/BrandLogo";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -26,8 +27,19 @@ export function TopBar() {
   }, [pathname]);
 
   return (
-    <header className="hidden md:block">
-      <div className="flex items-start justify-between gap-4">
+    <header>
+      <div className="flex items-center justify-between gap-4 md:hidden">
+        <BrandLogo className="w-32" />
+        <button
+          aria-label="Notificações"
+          className="inline-flex size-9 items-center justify-center rounded-[10px] bg-[var(--color-brand-blue-soft)] text-[var(--color-brand-blue)]"
+          type="button"
+        >
+          <Bell className="size-4" />
+        </button>
+      </div>
+
+      <div className="hidden items-start justify-between gap-4 md:flex">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[var(--color-primary-strong)]">
             {pathname.startsWith("/app/dashboard") ? "Dashboard" : "Contaí Pro"}

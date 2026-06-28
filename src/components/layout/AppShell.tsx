@@ -64,7 +64,7 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-[var(--background)] pb-24 md:grid md:grid-cols-[318px_1fr] md:pb-0">
       <aside className="hidden min-h-screen border-r border-slate-200 bg-white px-6 py-8 md:block">
-        <div className="rounded-[10px] bg-white px-1 py-2">
+        <div>
           <BrandLogo className="w-52" />
         </div>
         <nav className="mt-12 space-y-5">
@@ -91,7 +91,7 @@ export function AppShell({
       </aside>
       <div className="min-w-0 px-5 py-4 md:px-8 md:py-4">
         <TopBar />
-        <main className="min-w-0 md:pt-10">{children}</main>
+        <main className="min-w-0 pt-6 md:pt-10">{children}</main>
       </div>
       <BottomNavigation
         onQuickExpenseClick={() => {

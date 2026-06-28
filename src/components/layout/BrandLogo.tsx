@@ -12,10 +12,11 @@ export function BrandLogo({ className, full = false }: BrandLogoProps) {
     <Image
       alt="Contaí Pro"
       className={cn("block h-auto object-contain", className)}
-      height={full ? 274 : 136}
+      height={46}
       priority={full}
-      src={full ? "/brand/contai-pro-full.png" : "/brand/contai-pro-wordmark.png"}
-      width={full ? 1200 : 900}
+      src="/brand/contai-pro-logo.svg"
+      unoptimized
+      width={225}
     />
   );
 }
