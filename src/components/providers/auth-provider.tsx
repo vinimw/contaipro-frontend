@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   clearSession,
@@ -12,6 +13,7 @@ import {
 import { authService } from "@/services/auth.service";
 import type { AuthSession, LoginInput } from "@/types/auth";
 import type { User } from "@/types/user";
+import { queryKeys } from "@/lib/query-keys";
 
 type AuthContextValue = {
   user: User | null;
@@ -26,16 +28,20 @@ type AuthContextValue = {
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUserState] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const syncAuthState = useCallback(() => {
     const token = getAccessToken();
+    if (!token) {
+      queryClient.clear();
+    }
     setUserState(getStoredUser());
     setIsAuthenticated(Boolean(token));
     return token;
-  }, []);
+  }, [queryClient]);
 
   const refreshSession = useCallback(async () => {
     const token = syncAuthState();
@@ -50,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const currentUser = await authService.me();
       setStoredUser(currentUser);
+      queryClient.setQueryData(queryKeys.currentUser, currentUser);
       setUserState(currentUser);
       setIsAuthenticated(true);
     } catch {
@@ -59,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [syncAuthState]);
+  }, [queryClient, syncAuthState]);
 
   useEffect(() => {
     const syncAuth = () => {
@@ -87,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (session.user) {
       setStoredUser(session.user);
       setUserState(session.user);
+      queryClient.setQueryData(queryKeys.currentUser, session.user);
     } else {
       await refreshSession();
     }
@@ -96,6 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   function logout() {
     clearSession();
+    queryClient.clear();
     setUserState(null);
     setIsAuthenticated(false);
   }
@@ -109,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setStoredUser(userValue);
+    queryClient.setQueryData(queryKeys.currentUser, userValue);
     setUserState(userValue);
     setIsAuthenticated(true);
   }

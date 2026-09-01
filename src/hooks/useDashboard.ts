@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { dashboardService } from "@/services/dashboard.service";
 import type { BillPayment } from "@/types/bill-payment";
 import type { DashboardChartPoint, DashboardData } from "@/types/dashboard";
+import { queryKeys } from "@/lib/query-keys";
 
 const emptyDashboard: DashboardData = {
   month: "",
@@ -46,41 +47,23 @@ function recalculatePaymentSummary(data: DashboardData): DashboardData {
 }
 
 export function useDashboard(month: string) {
-  const [data, setData] = useState<DashboardData>(emptyDashboard);
-  const [chart, setChart] = useState<DashboardChartPoint[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const dashboardQuery = useQuery({
+    queryKey: queryKeys.dashboard.month(month),
+    queryFn: () => dashboardService.get(month),
+  });
+  const chartQuery = useQuery({
+    queryKey: queryKeys.dashboard.chart(),
+    queryFn: () => dashboardService.chart(),
+    staleTime: 5 * 60_000,
+  });
 
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const [dashboardData, chartData] = await Promise.all([
-        dashboardService.get(month),
-        dashboardService.chart(),
-      ]);
-      setData(dashboardData);
-      setChart(chartData);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Erro ao carregar dados do dashboard.";
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [month]);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void load();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [load]);
+  const data = dashboardQuery.data ?? emptyDashboard;
+  const chart: DashboardChartPoint[] = chartQuery.data ?? [];
 
   function updatePayment(updatedPayment: BillPayment) {
-    setData((currentData) => {
+    queryClient.setQueryData<DashboardData>(queryKeys.dashboard.month(month), (currentData) => {
+      if (!currentData) return currentData;
       const nextData = {
         ...currentData,
         bill_payments: currentData.bill_payments.map((payment) =>
@@ -90,14 +73,21 @@ export function useDashboard(month: string) {
 
       return recalculatePaymentSummary(nextData);
     });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(month) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
   }
 
   return {
     data,
     chart,
-    isLoading,
-    error,
-    reload: load,
+    isLoading: dashboardQuery.isPending || chartQuery.isPending,
+    error:
+      dashboardQuery.error?.message ??
+      chartQuery.error?.message ??
+      null,
+    reload: async () => {
+      await Promise.all([dashboardQuery.refetch(), chartQuery.refetch()]);
+    },
     updatePayment,
   };
 }

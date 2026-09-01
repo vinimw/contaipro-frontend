@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2 } from "lucide-react";
 
 import {
@@ -16,44 +17,34 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { formatCurrencyBRL } from "@/lib/currency";
 import { formatDateBR, getCurrentMonth } from "@/lib/dates";
 import { QUICK_EXPENSE_CREATED_EVENT } from "@/lib/events";
+import { queryKeys } from "@/lib/query-keys";
 import { quickExpensesService } from "@/services/quick-expenses.service";
 import type { QuickExpense } from "@/types/quick-expense";
 
 export default function ExpensesPage() {
   const currentMonth = getCurrentMonth();
-  const [items, setItems] = useState<QuickExpense[]>([]);
+  const queryClient = useQueryClient();
   const [editingExpense, setEditingExpense] = useState<QuickExpense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<QuickExpense | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  const loadExpenses = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage("");
-
-    try {
-      const response = await quickExpensesService.list(currentMonth);
-      setItems(response);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Erro ao carregar gastos.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentMonth]);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void loadExpenses();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [loadExpenses]);
+  const expensesQuery = useQuery({
+    queryKey: queryKeys.quickExpenses.month(currentMonth),
+    queryFn: () => quickExpensesService.list(currentMonth),
+  });
+  const items = expensesQuery.data ?? [];
+  const isLoading = expensesQuery.isPending;
+  const loadExpenses = async () => {
+    await expensesQuery.refetch();
+  };
 
   useEffect(() => {
     const handleQuickExpenseCreated = () => {
-      void loadExpenses();
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.quickExpenses.month(currentMonth),
+      });
     };
 
     window.addEventListener(QUICK_EXPENSE_CREATED_EVENT, handleQuickExpenseCreated);
@@ -61,7 +52,7 @@ export default function ExpensesPage() {
     return () => {
       window.removeEventListener(QUICK_EXPENSE_CREATED_EVENT, handleQuickExpenseCreated);
     };
-  }, [loadExpenses]);
+  }, [currentMonth, queryClient]);
 
   async function handleSubmit(values: QuickExpenseFormValues) {
     setSuccessMessage("");
@@ -84,6 +75,9 @@ export default function ExpensesPage() {
 
     setEditingExpense(null);
     await loadExpenses();
+    void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(currentMonth) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(currentMonth) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
   }
 
   async function handleDelete() {
@@ -105,6 +99,9 @@ export default function ExpensesPage() {
       setExpenseToDelete(null);
       setSuccessMessage("Gasto rapido removido.");
       await loadExpenses();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(currentMonth) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(currentMonth) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Nao foi possivel remover o gasto.");
     } finally {
@@ -131,7 +128,9 @@ export default function ExpensesPage() {
           {successMessage}
         </div>
       ) : null}
-      {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
+      {errorMessage || expensesQuery.error ? (
+        <ErrorMessage message={errorMessage || expensesQuery.error?.message || "Erro ao carregar gastos."} />
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
         <Card>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   BadgeDollarSign,
   Banknote,
@@ -45,6 +46,7 @@ import {
   subtractMonth,
 } from "@/lib/dates";
 import { QUICK_EXPENSE_CREATED_EVENT } from "@/lib/events";
+import { queryKeys } from "@/lib/query-keys";
 import { billPaymentsService } from "@/services/bill-payments.service";
 import { quickExpensesService } from "@/services/quick-expenses.service";
 import type { BillPayment } from "@/types/bill-payment";
@@ -108,6 +110,7 @@ function useIsDesktop() {
 }
 
 export default function DashboardPage() {
+  const queryClient = useQueryClient();
   const [month, setMonth] = useState(getCurrentMonth());
   const [busyPaymentId, setBusyPaymentId] = useState<string | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<BillPayment | null>(null);
@@ -175,6 +178,8 @@ export default function DashboardPage() {
       });
       setQuickExpenseOpen(false);
       setSuccessMessage("Gasto rapido criado com sucesso.");
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quickExpenses.month(month) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(month) });
       await reload();
     } catch (requestError) {
       setActionError(
@@ -198,6 +203,7 @@ export default function DashboardPage() {
       await billPaymentsService.remove(paymentToDelete.id);
       setPaymentToDelete(null);
       setSuccessMessage("Pagamento removido com sucesso.");
+      void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(month) });
       await reload();
     } catch (requestError) {
       setActionError(

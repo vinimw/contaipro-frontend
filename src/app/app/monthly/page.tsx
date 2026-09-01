@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
@@ -27,7 +28,7 @@ import {
   getCurrentMonth,
   subtractMonth,
 } from "@/lib/dates";
-import { QUICK_EXPENSE_CREATED_EVENT } from "@/lib/events";
+import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 import { billPaymentsService } from "@/services/bill-payments.service";
 import { quickExpensesService } from "@/services/quick-expenses.service";
@@ -141,15 +142,12 @@ function MonthlyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const month = getValidMonth(searchParams.get("month")) ?? getCurrentMonth();
-  const [items, setItems] = useState<MonthlyItem[]>([]);
+  const queryClient = useQueryClient();
   const [busyPaymentId, setBusyPaymentId] = useState<string | null>(null);
   const [itemToDelete, setItemToDelete] = useState<MonthlyItem | null>(null);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-
-  const totals = useMemo(() => getTotals(items), [items]);
 
   const updateMonth = useCallback(
     (nextMonth: string) => {
@@ -166,41 +164,18 @@ function MonthlyPageContent() {
     [pathname, router, searchParams],
   );
 
-  const loadPayments = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage("");
-
-    try {
-      const response = await billPaymentsService.list(month);
-      setItems(response.items);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Erro ao carregar pagamentos do mês.",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [month]);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void loadPayments();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [loadPayments]);
-
-  useEffect(() => {
-    const handleQuickExpenseCreated = () => {
-      void loadPayments();
-    };
-
-    window.addEventListener(QUICK_EXPENSE_CREATED_EVENT, handleQuickExpenseCreated);
-
-    return () => {
-      window.removeEventListener(QUICK_EXPENSE_CREATED_EVENT, handleQuickExpenseCreated);
-    };
-  }, [loadPayments]);
+  const paymentsQuery = useQuery({
+    queryKey: queryKeys.monthlyPayments.month(month),
+    queryFn: () => billPaymentsService.list(month),
+  });
+  const items = useMemo(() => paymentsQuery.data?.items ?? [], [paymentsQuery.data]);
+  const isLoading = paymentsQuery.isPending;
+  const totals = useMemo(() => getTotals(items), [items]);
+  const setItems = (updater: (current: MonthlyItem[]) => MonthlyItem[]) => {
+    queryClient.setQueryData(queryKeys.monthlyPayments.month(month), (current: Awaited<ReturnType<typeof billPaymentsService.list>> | undefined) =>
+      current ? { ...current, items: updater(current.items) } : current,
+    );
+  };
 
   async function togglePaymentStatus(item: MonthlyItem) {
     if (!isPaymentItem(item) || !item.status) {
@@ -224,6 +199,8 @@ function MonthlyPageContent() {
             : currentItem,
         ),
       );
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(month) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
       setSuccessMessage(
         item.status === "paid"
           ? "Pagamento voltou para pendente."
@@ -259,6 +236,11 @@ function MonthlyPageContent() {
       setItems((currentItems) =>
         currentItems.filter((currentItem) => currentItem.id !== itemToDelete.id),
       );
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(month) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
+      if (itemToDelete.item_type === "quick_expense") {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.quickExpenses.month(month) });
+      }
       setItemToDelete(null);
       setSuccessMessage("Gasto removido com sucesso.");
     } catch (error) {
@@ -320,7 +302,9 @@ function MonthlyPageContent() {
           {successMessage}
         </div>
       ) : null}
-      {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
+      {errorMessage || paymentsQuery.error ? (
+        <ErrorMessage message={errorMessage || paymentsQuery.error?.message || "Erro ao carregar pagamentos do mês."} />
+      ) : null}
 
       <section className="hidden gap-3 md:grid md:grid-cols-4">
         <Card className="rounded-[10px] p-4">

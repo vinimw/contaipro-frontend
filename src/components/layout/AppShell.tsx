@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Banknote,
   Landmark,
@@ -22,6 +23,8 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Modal } from "@/components/ui/Modal";
 import { QUICK_EXPENSE_CREATED_EVENT } from "@/lib/events";
 import { cn } from "@/lib/utils";
+import { getCurrentMonth } from "@/lib/dates";
+import { queryKeys } from "@/lib/query-keys";
 import { quickExpensesService } from "@/services/quick-expenses.service";
 
 const navigation = [
@@ -40,6 +43,7 @@ export function AppShell({
   pathname: string;
   children: React.ReactNode;
 }) {
+  const queryClient = useQueryClient();
   const [quickExpenseOpen, setQuickExpenseOpen] = useState(false);
   const [quickExpenseError, setQuickExpenseError] = useState("");
 
@@ -52,6 +56,13 @@ export function AppShell({
         amount: values.amount,
         expense_date: values.expense_date || null,
       });
+      const month = values.expense_date?.slice(0, 7) || getCurrentMonth();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.quickExpenses.month(month) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(month) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(month) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() }),
+      ]);
       window.dispatchEvent(new Event(QUICK_EXPENSE_CREATED_EVENT));
       setQuickExpenseOpen(false);
     } catch (error) {

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
@@ -13,6 +14,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { formatCurrencyBRL } from "@/lib/currency";
 import { formatDateBR } from "@/lib/dates";
+import { queryKeys } from "@/lib/query-keys";
 import { billsService } from "@/services/bills.service";
 import type { Bill, RecurrenceType } from "@/types/bill";
 
@@ -30,34 +32,16 @@ function getRecurrenceLabel(item: Bill) {
 }
 
 export default function BillsPage() {
-  const [items, setItems] = useState<Bill[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  const loadBills = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage("");
-
-    try {
-      const response = await billsService.list();
-      setItems(response);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Erro ao carregar contas.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void loadBills();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [loadBills]);
+  const billsQuery = useQuery({ queryKey: queryKeys.bills.all, queryFn: billsService.list });
+  const deleteMutation = useMutation({ mutationFn: billsService.remove });
+  const items = billsQuery.data ?? [];
+  const isLoading = billsQuery.isPending;
+  const isDeleting = deleteMutation.isPending;
 
   async function handleDelete() {
     if (!billToDelete) {
@@ -66,17 +50,18 @@ export default function BillsPage() {
 
     setSuccessMessage("");
     setErrorMessage("");
-    setIsDeleting(true);
-
     try {
-      await billsService.remove(billToDelete.id);
-      setItems((current) => current.filter((item) => item.id !== billToDelete.id));
+      await deleteMutation.mutateAsync(billToDelete.id);
+      queryClient.setQueryData<Bill[]>(queryKeys.bills.all, (current = []) =>
+        current.filter((item) => item.id !== billToDelete.id),
+      );
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.all });
       setBillToDelete(null);
       setSuccessMessage("Conta removida com sucesso.");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Nao foi possivel remover a conta.");
-    } finally {
-      setIsDeleting(false);
     }
   }
 
