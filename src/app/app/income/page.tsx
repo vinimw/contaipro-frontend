@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/Input";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { formatCurrencyBRL } from "@/lib/currency";
 import { formatDateBR, formatMonthLabel, getCurrentMonth } from "@/lib/dates";
+import { queryKeys } from "@/lib/query-keys";
 import { extraIncomesService } from "@/services/extra-incomes.service";
 import { financialProfileService } from "@/services/financial-profile.service";
 import type { ExtraIncome } from "@/types/extra-income";
@@ -44,10 +46,7 @@ type ExtraIncomeFormInput = z.input<typeof extraIncomeSchema>;
 
 export default function IncomePage() {
   const currentMonth = getCurrentMonth();
-  const [items, setItems] = useState<ExtraIncome[]>([]);
-  const [profileOverview, setProfileOverview] =
-    useState<FinancialProfileOverview | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [editingProfilePeriod, setEditingProfilePeriod] =
@@ -74,37 +73,29 @@ export default function IncomePage() {
     },
   });
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage("");
-
-    try {
-      const [profile, extraIncomes] = await Promise.all([
-        financialProfileService.get(),
-        extraIncomesService.list(currentMonth),
-      ]);
-
-      setProfileOverview(profile);
-      profileForm.reset({
-        monthly_income_amount:
-          profile.current_profile?.monthly_income_amount ?? 0,
-        start_month: currentMonth,
-      });
-      setItems(extraIncomes);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Erro ao carregar renda.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentMonth, profileForm]);
+  const profileQuery = useQuery({
+    queryKey: queryKeys.financialProfile,
+    queryFn: financialProfileService.get,
+    staleTime: 5 * 60_000,
+  });
+  const incomesQuery = useQuery({
+    queryKey: queryKeys.extraIncomes.month(currentMonth),
+    queryFn: () => extraIncomesService.list(currentMonth),
+  });
+  const profileOverview = profileQuery.data ?? null;
+  const items = incomesQuery.data ?? [];
+  const isLoading = profileQuery.isPending || incomesQuery.isPending;
+  const setProfileOverview = (profile: FinancialProfileOverview) =>
+    queryClient.setQueryData(queryKeys.financialProfile, profile);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void loadData();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [loadData]);
+    if (profileQuery.data) {
+      profileForm.reset({
+        monthly_income_amount: profileQuery.data.current_profile?.monthly_income_amount ?? 0,
+        start_month: currentMonth,
+      });
+    }
+  }, [currentMonth, profileForm, profileQuery.data]);
 
   async function submitProfile(values: ProfileFormValues) {
     setSuccessMessage("");
@@ -115,6 +106,8 @@ export default function IncomePage() {
         ? await financialProfileService.updatePeriod(editingProfilePeriod.id, values)
         : await financialProfileService.update(values);
       setProfileOverview(profile);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
       setEditingProfilePeriod(null);
       profileForm.reset({
         monthly_income_amount:
@@ -150,6 +143,8 @@ export default function IncomePage() {
         profilePeriodToDelete.id,
       );
       setProfileOverview(profile);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
 
       if (editingProfilePeriod?.id === profilePeriodToDelete.id) {
         setEditingProfilePeriod(null);
@@ -197,7 +192,9 @@ export default function IncomePage() {
       income_date: "",
     });
     setEditingIncome(null);
-    await loadData();
+    await incomesQuery.refetch();
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
   }
 
   async function handleDelete() {
@@ -223,7 +220,9 @@ export default function IncomePage() {
 
       setIncomeToDelete(null);
       setSuccessMessage("Renda extra removida.");
-      await loadData();
+      await incomesQuery.refetch();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Nao foi possivel remover a renda extra.");
     } finally {

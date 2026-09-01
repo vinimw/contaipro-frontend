@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/Input";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services/user.service";
+import { queryKeys } from "@/lib/query-keys";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Informe seu nome."),
@@ -33,9 +35,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
 export default function SettingsPage() {
-  const { setUser } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  const { setUser, user: authenticatedUser } = useAuth();
   const [successMessage, setSuccessMessage] = useState("");
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -53,30 +53,21 @@ export default function SettingsPage() {
     },
   });
 
-  const loadUser = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage("");
-
-    try {
-      const user = await userService.getMe();
-      profileForm.reset({
-        name: user.name,
-        email: user.email,
-      });
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Erro ao carregar configuracoes.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [profileForm]);
+  const userQuery = useQuery({
+    queryKey: queryKeys.currentUser,
+    queryFn: userService.getMe,
+    initialData: authenticatedUser ?? undefined,
+    staleTime: 5 * 60_000,
+  });
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void loadUser();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [loadUser]);
+    if (userQuery.data) {
+      profileForm.reset({
+        name: userQuery.data.name,
+        email: userQuery.data.email,
+      });
+    }
+  }, [profileForm, userQuery.data]);
 
   async function submitProfile(values: ProfileFormValues) {
     const user = await userService.updateProfile({ name: values.name });
@@ -109,10 +100,10 @@ export default function SettingsPage() {
           {successMessage}
         </div>
       ) : null}
-      {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
-      {isLoading ? <LoadingState label="Carregando configuracoes..." /> : null}
+      {userQuery.error ? <ErrorMessage message={userQuery.error.message || "Erro ao carregar configuracoes."} /> : null}
+      {userQuery.isPending ? <LoadingState label="Carregando configuracoes..." /> : null}
 
-      {!isLoading ? (
+      {!userQuery.isPending ? (
         <div className="grid gap-6 xl:grid-cols-2">
           <Card>
             <h2 className="font-display text-xl font-semibold text-slate-950">Perfil</h2>
