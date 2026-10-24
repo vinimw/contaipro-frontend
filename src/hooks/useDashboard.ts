@@ -85,9 +85,6 @@ export function useDashboard(month: string) {
       dashboardQuery.error?.message ??
       chartQuery.error?.message ??
       null,
-    reload: async () => {
-      await Promise.all([dashboardQuery.refetch(), chartQuery.refetch()]);
-    },
     updatePayment,
   };
 }

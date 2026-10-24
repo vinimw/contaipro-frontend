@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input } from "@/components/ui/Input";
+import { getToday } from "@/lib/dates";
 
 const quickExpenseSchema = z.object({
   name: z.string().min(2, "Informe um nome para o gasto."),
@@ -37,7 +38,7 @@ export function QuickExpenseForm({
     defaultValues: {
       name: defaultValues?.name ?? "",
       amount: defaultValues?.amount ?? 0,
-      expense_date: defaultValues?.expense_date ?? "",
+      expense_date: defaultValues ? (defaultValues.expense_date ?? "") : getToday(),
     },
   });
 
@@ -48,7 +49,7 @@ export function QuickExpenseForm({
       reset({
         name: "",
         amount: 0,
-        expense_date: "",
+        expense_date: getToday(),
       });
     }
   }

@@ -46,7 +46,6 @@ import {
   getCurrentMonth,
   subtractMonth,
 } from "@/lib/dates";
-import { QUICK_EXPENSE_CREATED_EVENT } from "@/lib/events";
 import { queryKeys } from "@/lib/query-keys";
 import { billPaymentsService } from "@/services/bill-payments.service";
 import { quickExpensesService } from "@/services/quick-expenses.service";
@@ -125,24 +124,12 @@ export default function DashboardPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [actionError, setActionError] = useState("");
   const [quickExpenseOpen, setQuickExpenseOpen] = useState(false);
-  const { chart, data, error, isLoading, reload, updatePayment } = useDashboard(month);
+  const { chart, data, error, isLoading, updatePayment } = useDashboard(month);
   const isDesktop = useIsDesktop();
 
   const firstPayment = data.bill_payments[0];
   const secondaryPayments = data.bill_payments.slice(1, 3);
   const recentExpenses = data.quick_expenses.slice(0, 2);
-
-  useEffect(() => {
-    const handleQuickExpenseCreated = () => {
-      void reload();
-    };
-
-    window.addEventListener(QUICK_EXPENSE_CREATED_EVENT, handleQuickExpenseCreated);
-
-    return () => {
-      window.removeEventListener(QUICK_EXPENSE_CREATED_EVENT, handleQuickExpenseCreated);
-    };
-  }, [reload]);
 
   async function togglePaymentStatus(item: BillPayment) {
     setBusyPaymentId(item.id);
@@ -187,7 +174,8 @@ export default function DashboardPage() {
       setSuccessMessage("Gasto rapido criado com sucesso.");
       void queryClient.invalidateQueries({ queryKey: queryKeys.quickExpenses.month(month) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(month) });
-      await reload();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(month) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
     } catch (requestError) {
       setActionError(
         requestError instanceof Error
@@ -211,7 +199,8 @@ export default function DashboardPage() {
       setPaymentToDelete(null);
       setSuccessMessage("Pagamento removido com sucesso.");
       void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(month) });
-      await reload();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(month) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
     } catch (requestError) {
       setActionError(
         requestError instanceof Error

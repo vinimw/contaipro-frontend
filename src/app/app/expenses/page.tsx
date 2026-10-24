@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2 } from "lucide-react";
 
@@ -16,7 +16,6 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { formatCurrencyBRL } from "@/lib/currency";
 import { formatDateBR, getCurrentMonth } from "@/lib/dates";
-import { QUICK_EXPENSE_CREATED_EVENT } from "@/lib/events";
 import { queryKeys } from "@/lib/query-keys";
 import { quickExpensesService } from "@/services/quick-expenses.service";
 import type { QuickExpense } from "@/types/quick-expense";
@@ -39,20 +38,6 @@ export default function ExpensesPage() {
   const loadExpenses = async () => {
     await expensesQuery.refetch();
   };
-
-  useEffect(() => {
-    const handleQuickExpenseCreated = () => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.quickExpenses.month(currentMonth),
-      });
-    };
-
-    window.addEventListener(QUICK_EXPENSE_CREATED_EVENT, handleQuickExpenseCreated);
-
-    return () => {
-      window.removeEventListener(QUICK_EXPENSE_CREATED_EVENT, handleQuickExpenseCreated);
-    };
-  }, [currentMonth, queryClient]);
 
   async function handleSubmit(values: QuickExpenseFormValues) {
     setSuccessMessage("");
