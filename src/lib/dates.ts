@@ -1,3 +1,9 @@
+const dateFormatter = new Intl.DateTimeFormat("pt-BR");
+const monthLabelFormatter = new Intl.DateTimeFormat("pt-BR", {
+  month: "long",
+  year: "numeric",
+});
+
 function toDateInput(value: string) {
   if (/^\d{4}-\d{2}$/.test(value)) {
     return new Date(`${value}-01T12:00:00`);
@@ -11,7 +17,7 @@ export function formatDateBR(value: string | null | undefined) {
     return "-";
   }
 
-  return new Intl.DateTimeFormat("pt-BR").format(toDateInput(value));
+  return dateFormatter.format(toDateInput(value));
 }
 
 export function getCurrentMonth() {
@@ -39,9 +45,5 @@ export function subtractMonth(value: string, amount = 1) {
 }
 
 export function formatMonthLabel(value: string) {
-  const date = toDateInput(value);
-  return new Intl.DateTimeFormat("pt-BR", {
-    month: "long",
-    year: "numeric",
-  }).format(date);
+  return monthLabelFormatter.format(toDateInput(value));
 }

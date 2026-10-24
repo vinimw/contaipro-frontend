@@ -15,13 +15,13 @@ import { Card } from "@/components/ui/Card";
 import { formatCurrencyBRL } from "@/lib/currency";
 import type { DashboardChartPoint } from "@/types/dashboard";
 
-function formatMonthTick(value: string) {
-  const date = new Date(`${value}-01T12:00:00`);
+const monthTickFormatter = new Intl.DateTimeFormat("pt-BR", {
+  month: "short",
+  year: "2-digit",
+});
 
-  return new Intl.DateTimeFormat("pt-BR", {
-    month: "short",
-    year: "2-digit",
-  }).format(date);
+function formatMonthTick(value: string) {
+  return monthTickFormatter.format(new Date(`${value}-01T12:00:00`));
 }
 
 function formatAxisCurrency(value: number) {
