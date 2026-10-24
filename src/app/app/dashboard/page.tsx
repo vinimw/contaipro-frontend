@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   BadgeDollarSign,
@@ -97,20 +97,22 @@ function statusLabel(status: BillPayment["status"]) {
   return "Agendado";
 }
 
+const desktopQuery = "(min-width: 768px)";
+
+function subscribeToDesktop(onChange: () => void) {
+  const mediaQuery = window.matchMedia(desktopQuery);
+  mediaQuery.addEventListener("change", onChange);
+
+  return () => mediaQuery.removeEventListener("change", onChange);
+}
+
+// Reads the breakpoint on the first client render, so the chart mounts once with the right size.
 function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(min-width: 768px)");
-    const updateMatch = () => setIsDesktop(mediaQuery.matches);
-
-    updateMatch();
-    mediaQuery.addEventListener("change", updateMatch);
-
-    return () => mediaQuery.removeEventListener("change", updateMatch);
-  }, []);
-
-  return isDesktop;
+  return useSyncExternalStore(
+    subscribeToDesktop,
+    () => window.matchMedia(desktopQuery).matches,
+    () => false,
+  );
 }
 
 export default function DashboardPage() {
@@ -122,7 +124,8 @@ export default function DashboardPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [actionError, setActionError] = useState("");
   const [quickExpenseOpen, setQuickExpenseOpen] = useState(false);
-  const { chart, data, error, isLoading, updatePayment } = useDashboard(month);
+  const { chart, chartError, data, error, isChartLoading, isLoading, updatePayment } =
+    useDashboard(month);
   const isDesktop = useIsDesktop();
 
   const firstPayment = data.bill_payments[0];
@@ -329,7 +332,11 @@ export default function DashboardPage() {
           </section>
 
           <section className="grid gap-4 md:grid-cols-[minmax(0,2.1fr)_minmax(260px,0.9fr)]">
-            {chart.length ? (
+            {isChartLoading ? (
+              <MonthlyChartSkeleton />
+            ) : chartError ? (
+              <ErrorMessage message={chartError} />
+            ) : chart.length ? (
               <MonthlyChart compact={!isDesktop} data={chart} />
             ) : (
               <EmptyState
