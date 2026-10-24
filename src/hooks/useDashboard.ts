@@ -1,10 +1,12 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { keepPreviousData, noop, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { dashboardService } from "@/services/dashboard.service";
 import type { BillPayment } from "@/types/bill-payment";
 import type { DashboardChartPoint, DashboardData } from "@/types/dashboard";
+import { addMonth, subtractMonth } from "@/lib/dates";
 import { queryKeys } from "@/lib/query-keys";
 
 const emptyDashboard: DashboardData = {
@@ -51,12 +53,24 @@ export function useDashboard(month: string) {
   const dashboardQuery = useQuery({
     queryKey: queryKeys.dashboard.month(month),
     queryFn: () => dashboardService.get(month),
+    placeholderData: keepPreviousData,
   });
   const chartQuery = useQuery({
     queryKey: queryKeys.dashboard.chart(),
     queryFn: () => dashboardService.chart(),
     staleTime: 5 * 60_000,
   });
+
+  useEffect(() => {
+    for (const neighbor of [subtractMonth(month), addMonth(month)]) {
+      void queryClient
+        .query({
+          queryKey: queryKeys.dashboard.month(neighbor),
+          queryFn: () => dashboardService.get(neighbor),
+        })
+        .catch(noop);
+    }
+  }, [month, queryClient]);
 
   const data = dashboardQuery.data ?? emptyDashboard;
   const chart: DashboardChartPoint[] = chartQuery.data ?? [];

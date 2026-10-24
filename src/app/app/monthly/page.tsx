@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useCallback, useMemo, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { keepPreviousData, noop, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
@@ -169,7 +169,20 @@ function MonthlyPageContent() {
   const paymentsQuery = useQuery({
     queryKey: queryKeys.monthlyPayments.month(month),
     queryFn: () => billPaymentsService.list(month),
+    placeholderData: keepPreviousData,
   });
+
+  useEffect(() => {
+    for (const neighbor of [subtractMonth(month), addMonth(month)]) {
+      void queryClient
+        .query({
+          queryKey: queryKeys.monthlyPayments.month(neighbor),
+          queryFn: () => billPaymentsService.list(neighbor),
+        })
+        .catch(noop);
+    }
+  }, [month, queryClient]);
+
   const items = useMemo(() => paymentsQuery.data?.items ?? [], [paymentsQuery.data]);
   const isLoading = paymentsQuery.isPending;
   const totals = useMemo(() => getTotals(items), [items]);
