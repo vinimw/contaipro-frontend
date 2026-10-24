@@ -94,11 +94,10 @@ export function useDashboard(month: string) {
   return {
     data,
     chart,
-    isLoading: dashboardQuery.isPending || chartQuery.isPending,
-    error:
-      dashboardQuery.error?.message ??
-      chartQuery.error?.message ??
-      null,
+    isLoading: dashboardQuery.isPending,
+    error: dashboardQuery.error?.message ?? null,
+    isChartLoading: chartQuery.isPending,
+    chartError: chartQuery.error?.message ?? null,
     updatePayment,
   };
 }
