@@ -103,7 +103,7 @@ export function MonthlyChart({
       </div>
       <div
         className={
-          compact ? "h-[104px] min-h-[104px] min-w-[1px]" : "h-[242px] min-h-[242px] min-w-[1px]"
+          compact ? "min-h-0 min-w-[1px] flex-1" : "h-[242px] min-h-[242px] min-w-[1px]"
         }
       >
         <ResponsiveContainer width="100%" height="100%">
@@ -111,7 +111,7 @@ export function MonthlyChart({
             data={data}
             margin={
               compact
-                ? { left: 0, right: 0, top: 10, bottom: -4 }
+                ? { left: 0, right: 0, top: 6, bottom: 0 }
                 : { left: -8, right: 8, top: 8, bottom: 12 }
             }
           >
@@ -120,8 +120,9 @@ export function MonthlyChart({
             axisLine={false}
             dataKey="month"
             tickFormatter={formatMonthTick}
-            interval={compact ? 1 : 1}
+            interval={1}
             height={compact ? 20 : 34}
+            padding={compact ? { left: 22, right: 22 } : undefined}
             tick={{ fill: "#64748b", fontSize: compact ? 8 : 11 }}
             tickLine={false}
             tickMargin={compact ? 4 : 12}
@@ -173,9 +174,9 @@ export function MonthlyChart({
           ) : null}
           <Line
             yAxisId="balance"
-            activeDot={{ r: compact ? 3 : 6 }}
+            activeDot={{ fill: "#e0ad00", r: compact ? 4 : 6, stroke: "#fff", strokeWidth: 2 }}
             dataKey="projected_balance"
-            dot={{ fill: "#e0ad00", r: compact ? 1.8 : 4 }}
+            dot={{ fill: "#e0ad00", r: compact ? 2.5 : 4, stroke: "#fff", strokeWidth: compact ? 1.5 : 2 }}
             name="Saldo previsto"
             stroke="#e0ad00"
             strokeWidth={compact ? 2 : 2.5}
