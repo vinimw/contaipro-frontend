@@ -15,10 +15,8 @@ import {
 import { BrandLogo } from "@/components/layout/BrandLogo";
 import { BottomNavigation } from "@/components/layout/BottomNavigation";
 import { TopBar } from "@/components/layout/TopBar";
-import {
-  QuickExpenseForm,
-  type QuickExpenseFormValues,
-} from "@/components/dashboard/QuickExpenseForm";
+import { LazyQuickExpenseForm } from "@/components/dashboard/LazyQuickExpenseForm";
+import type { QuickExpenseFormValues } from "@/components/dashboard/QuickExpenseForm";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
@@ -115,7 +113,7 @@ export function AppShell({
       >
         <div className="space-y-4">
           {quickExpenseError ? <ErrorMessage message={quickExpenseError} /> : null}
-          <QuickExpenseForm onSubmit={handleQuickExpenseSubmit} />
+          <LazyQuickExpenseForm onSubmit={handleQuickExpenseSubmit} />
         </div>
       </Modal>
     </div>

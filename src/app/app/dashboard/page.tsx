@@ -24,10 +24,8 @@ import {
 
 import { BillPaymentList } from "@/components/dashboard/BillPaymentList";
 import { MonthlyChartSkeleton } from "@/components/dashboard/MonthlyChartSkeleton";
-import {
-  QuickExpenseForm,
-  type QuickExpenseFormValues,
-} from "@/components/dashboard/QuickExpenseForm";
+import { LazyQuickExpenseForm } from "@/components/dashboard/LazyQuickExpenseForm";
+import type { QuickExpenseFormValues } from "@/components/dashboard/QuickExpenseForm";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -501,7 +499,7 @@ export default function DashboardPage() {
       ) : null}
 
       <Modal open={quickExpenseOpen} onClose={() => setQuickExpenseOpen(false)} title="Novo gasto rapido">
-        <QuickExpenseForm onSubmit={handleQuickExpenseSubmit} />
+        <LazyQuickExpenseForm onSubmit={handleQuickExpenseSubmit} />
       </Modal>
       <ConfirmDialog
         description={
