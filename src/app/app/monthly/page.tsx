@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Loader2,
   RotateCcw,
   ShoppingBasket,
   Trash2,
@@ -143,7 +144,8 @@ function MonthlyPageContent() {
   const searchParams = useSearchParams();
   const month = getValidMonth(searchParams.get("month")) ?? getCurrentMonth();
   const queryClient = useQueryClient();
-  const [busyPaymentId, setBusyPaymentId] = useState<string | null>(null);
+  const [busyPaymentIds, setBusyPaymentIds] = useState<Set<string>>(() => new Set());
+  const busyPaymentIdsRef = useRef<Set<string>>(new Set());
   const [itemToDelete, setItemToDelete] = useState<MonthlyItem | null>(null);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -178,11 +180,12 @@ function MonthlyPageContent() {
   };
 
   async function togglePaymentStatus(item: MonthlyItem) {
-    if (!isPaymentItem(item) || !item.status) {
+    if (!isPaymentItem(item) || !item.status || busyPaymentIdsRef.current.has(item.id)) {
       return;
     }
 
-    setBusyPaymentId(item.id);
+    busyPaymentIdsRef.current.add(item.id);
+    setBusyPaymentIds(new Set(busyPaymentIdsRef.current));
     setErrorMessage("");
     setSuccessMessage("");
 
@@ -213,7 +216,8 @@ function MonthlyPageContent() {
           : "Não foi possível atualizar o pagamento.",
       );
     } finally {
-      setBusyPaymentId(null);
+      busyPaymentIdsRef.current.delete(item.id);
+      setBusyPaymentIds(new Set(busyPaymentIdsRef.current));
     }
   }
 
@@ -355,108 +359,117 @@ function MonthlyPageContent() {
 
         {!isLoading && items.length ? (
           <div className="space-y-2">
-            {items.map((item) => (
-              <Card
-                key={item.id}
-                className={cn(
-                  "rounded-[10px] p-4 shadow-[0_16px_34px_rgba(0,71,255,0.06)] md:rounded-[10px] md:px-3.5 md:py-2.5",
-                  item.status === "overdue"
-                    ? "border-rose-100 bg-rose-50/80"
-                    : "border-white/80 bg-white",
-                )}
-              >
-                <div className="grid grid-cols-[42px_minmax(0,1fr)] items-center gap-3 md:grid-cols-[40px_minmax(0,1fr)_auto] md:gap-3">
-                  <span
-                    className={cn(
-                      "inline-flex size-[42px] shrink-0 items-center justify-center rounded-[10px] md:size-10 md:rounded-[10px]",
-                      item.status ? iconClasses[item.status] : "bg-[var(--color-brand-blue-soft)] text-[var(--color-brand-blue)]",
-                    )}
-                  >
-                    {item.item_type === "quick_expense" ? (
-                      <ShoppingBasket className="size-5 md:size-4.5" />
-                    ) : item.status === "paid" ? (
-                      <CheckCircle2 className="size-5 md:size-5" />
-                    ) : (
-                      <Clock3 className="size-5 md:size-4.5" />
-                    )}
-                  </span>
+            {items.map((item) => {
+              const isUpdatingPayment = busyPaymentIds.has(item.id);
 
-                  <div className="min-w-0">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <h3 className="min-w-0 max-w-full break-words text-base font-semibold tracking-[-0.03em] text-slate-900 md:text-base md:leading-tight">
-                        {item.name}
-                      </h3>
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-[10px] px-2 py-1 text-[0.68rem] font-extrabold uppercase leading-none md:rounded-[10px] md:px-2 md:py-1 md:text-[0.65rem]",
-                          item.status ? statusClasses[item.status] : "bg-[var(--color-brand-blue-soft)] text-[var(--color-brand-blue)]",
-                        )}
-                      >
-                        {item.status ? statusLabel[item.status] : "Gasto"}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs font-medium text-slate-500 md:text-[0.72rem]">
-                      {item.item_type === "bill_payment" ? "Vence" : "Data"}{" "}
-                      {formatShortDate(item.occurrence_date)}
-                    </p>
-                  </div>
+              return (
+                <Card
+                  key={item.id}
+                  aria-busy={isUpdatingPayment}
+                  className={cn(
+                    "rounded-[10px] p-4 shadow-[0_16px_34px_rgba(0,71,255,0.06)] md:rounded-[10px] md:px-3.5 md:py-2.5",
+                    item.status === "overdue"
+                      ? "border-rose-100 bg-rose-50/80"
+                      : "border-white/80 bg-white",
+                  )}
+                >
+                  <div className="grid grid-cols-[42px_minmax(0,1fr)] items-center gap-3 md:grid-cols-[40px_minmax(0,1fr)_auto] md:gap-3">
+                    <span
+                      className={cn(
+                        "inline-flex size-[42px] shrink-0 items-center justify-center rounded-[10px] md:size-10 md:rounded-[10px]",
+                        item.status ? iconClasses[item.status] : "bg-[var(--color-brand-blue-soft)] text-[var(--color-brand-blue)]",
+                      )}
+                    >
+                      {item.item_type === "quick_expense" ? (
+                        <ShoppingBasket className="size-5 md:size-4.5" />
+                      ) : item.status === "paid" ? (
+                        <CheckCircle2 className="size-5 md:size-5" />
+                      ) : (
+                        <Clock3 className="size-5 md:size-4.5" />
+                      )}
+                    </span>
 
-                  <div className="col-span-2 flex shrink-0 items-center justify-between gap-2 pl-[54px] md:col-span-1 md:pl-0">
-                    <p className="text-lg font-extrabold tracking-[-0.04em] text-slate-900 md:min-w-[112px] md:text-right md:text-lg md:leading-tight">
-                      {formatCurrencyBRL(item.amount)}
-                    </p>
-
-                    <div className="flex items-center gap-1.5">
-                      {item.can_mark_as_paid || item.can_mark_as_pending ? (
-                        <ActionTooltip
-                          label={
-                            item.status === "paid"
-                              ? "Voltar para pendente"
-                              : "Confirmar pagamento"
-                          }
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <h3 className="min-w-0 max-w-full break-words text-base font-semibold tracking-[-0.03em] text-slate-900 md:text-base md:leading-tight">
+                          {item.name}
+                        </h3>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-[10px] px-2 py-1 text-[0.68rem] font-extrabold uppercase leading-none md:rounded-[10px] md:px-2 md:py-1 md:text-[0.65rem]",
+                            item.status ? statusClasses[item.status] : "bg-[var(--color-brand-blue-soft)] text-[var(--color-brand-blue)]",
+                          )}
                         >
-                          <Button
-                            aria-label={
-                              item.status === "paid"
-                                ? `Voltar ${item.name} para pendente`
-                                : `Confirmar pagamento de ${item.name}`
+                          {item.status ? statusLabel[item.status] : "Gasto"}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs font-medium text-slate-500 md:text-[0.72rem]">
+                        {item.item_type === "bill_payment" ? "Vence" : "Data"}{" "}
+                        {formatShortDate(item.occurrence_date)}
+                      </p>
+                    </div>
+
+                    <div className="col-span-2 flex shrink-0 items-center justify-between gap-2 pl-[54px] md:col-span-1 md:pl-0">
+                      <p className="text-lg font-extrabold tracking-[-0.04em] text-slate-900 md:min-w-[112px] md:text-right md:text-lg md:leading-tight">
+                        {formatCurrencyBRL(item.amount)}
+                      </p>
+
+                      <div className="flex items-center gap-1.5">
+                        {item.can_mark_as_paid || item.can_mark_as_pending ? (
+                          <ActionTooltip
+                            label={
+                              isUpdatingPayment
+                                ? "Processando..."
+                                : item.status === "paid"
+                                  ? "Voltar para pendente"
+                                  : "Confirmar pagamento"
                             }
-                            className={cn(
-                              "size-9 min-h-0 rounded-[10px] p-0 shadow-none md:size-8",
-                              item.status === "paid"
-                                ? "bg-[var(--color-primary-soft)] text-[#8a6400] hover:bg-[#ffefb6]"
-                                : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
-                            )}
-                            disabled={busyPaymentId === item.id}
-                            variant="secondary"
-                            onClick={() => void togglePaymentStatus(item)}
                           >
-                            {item.status === "paid" ? (
-                              <RotateCcw className="size-4 md:size-3.5" />
-                            ) : (
-                              <CheckCircle2 className="size-4 md:size-3.5" />
-                            )}
-                          </Button>
-                        </ActionTooltip>
-                      ) : null}
-                      {isDeletableItem(item) ? (
-                        <ActionTooltip label="Excluir gasto">
-                          <Button
-                            aria-label={`Excluir ${item.name}`}
-                            className="size-9 min-h-0 rounded-[10px] p-0 shadow-none md:size-8"
-                            disabled={isDeletingItem && itemToDelete?.id === item.id}
-                            variant="danger"
-                            onClick={() => setItemToDelete(item)}
-                          >
-                            <Trash2 className="size-4 md:size-3.5" />
-                          </Button>
-                        </ActionTooltip>
-                      ) : null}
+                            <Button
+                              aria-label={
+                                item.status === "paid"
+                                  ? `Voltar ${item.name} para pendente`
+                                  : `Confirmar pagamento de ${item.name}`
+                              }
+                              className={cn(
+                                "size-9 min-h-0 rounded-[10px] p-0 shadow-none md:size-8",
+                                item.status === "paid"
+                                  ? "bg-[var(--color-primary-soft)] text-[#8a6400] hover:bg-[#ffefb6]"
+                                  : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+                              )}
+                              disabled={isUpdatingPayment}
+                              variant="secondary"
+                              onClick={() => void togglePaymentStatus(item)}
+                            >
+                              {isUpdatingPayment ? (
+                                <Loader2 className="size-4 animate-spin md:size-3.5" />
+                              ) : item.status === "paid" ? (
+                                <RotateCcw className="size-4 md:size-3.5" />
+                              ) : (
+                                <CheckCircle2 className="size-4 md:size-3.5" />
+                              )}
+                            </Button>
+                          </ActionTooltip>
+                        ) : null}
+                        {isDeletableItem(item) ? (
+                          <ActionTooltip label="Excluir gasto">
+                            <Button
+                              aria-label={`Excluir ${item.name}`}
+                              className="size-9 min-h-0 rounded-[10px] p-0 shadow-none md:size-8"
+                              disabled={isDeletingItem && itemToDelete?.id === item.id}
+                              variant="danger"
+                              onClick={() => setItemToDelete(item)}
+                            >
+                              <Trash2 className="size-4 md:size-3.5" />
+                            </Button>
+                          </ActionTooltip>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         ) : null}
       </section>
