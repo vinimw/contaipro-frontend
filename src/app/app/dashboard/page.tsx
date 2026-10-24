@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,7 +23,7 @@ import {
 } from "lucide-react";
 
 import { BillPaymentList } from "@/components/dashboard/BillPaymentList";
-import { MonthlyChart } from "@/components/dashboard/MonthlyChart";
+import { MonthlyChartSkeleton } from "@/components/dashboard/MonthlyChartSkeleton";
 import {
   QuickExpenseForm,
   type QuickExpenseFormValues,
@@ -50,6 +51,12 @@ import { queryKeys } from "@/lib/query-keys";
 import { billPaymentsService } from "@/services/bill-payments.service";
 import { quickExpensesService } from "@/services/quick-expenses.service";
 import type { BillPayment } from "@/types/bill-payment";
+
+// recharts is heavy, so keep it out of the dashboard's initial bundle.
+const MonthlyChart = dynamic(
+  () => import("@/components/dashboard/MonthlyChart").then((mod) => mod.MonthlyChart),
+  { ssr: false, loading: () => <MonthlyChartSkeleton /> },
+);
 
 const summaryAccent = {
   income: "bg-[var(--color-primary)]",
