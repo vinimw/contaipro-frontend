@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, noop, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
@@ -174,10 +174,12 @@ function MonthlyPageContent() {
 
   useEffect(() => {
     for (const neighbor of [subtractMonth(month), addMonth(month)]) {
-      void queryClient.prefetchQuery({
-        queryKey: queryKeys.monthlyPayments.month(neighbor),
-        queryFn: () => billPaymentsService.list(neighbor),
-      });
+      void queryClient
+        .query({
+          queryKey: queryKeys.monthlyPayments.month(neighbor),
+          queryFn: () => billPaymentsService.list(neighbor),
+        })
+        .catch(noop);
     }
   }, [month, queryClient]);
 

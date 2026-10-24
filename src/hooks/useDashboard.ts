@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, noop, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { dashboardService } from "@/services/dashboard.service";
 import type { BillPayment } from "@/types/bill-payment";
@@ -63,10 +63,12 @@ export function useDashboard(month: string) {
 
   useEffect(() => {
     for (const neighbor of [subtractMonth(month), addMonth(month)]) {
-      void queryClient.prefetchQuery({
-        queryKey: queryKeys.dashboard.month(neighbor),
-        queryFn: () => dashboardService.get(neighbor),
-      });
+      void queryClient
+        .query({
+          queryKey: queryKeys.dashboard.month(neighbor),
+          queryFn: () => dashboardService.get(neighbor),
+        })
+        .catch(noop);
     }
   }, [month, queryClient]);
 
