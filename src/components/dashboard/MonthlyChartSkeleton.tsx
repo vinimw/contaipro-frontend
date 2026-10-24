@@ -11,7 +11,7 @@ export function MonthlyChartSkeleton() {
         <div className="h-4 w-24 rounded-[10px] bg-slate-200 md:h-6 md:w-64" />
         <div className="mt-2 h-2.5 w-48 rounded-[10px] bg-slate-100 md:h-3.5 md:w-80" />
       </div>
-      <div className="h-[104px] min-h-[104px] animate-pulse rounded-[10px] bg-slate-100 md:h-[242px] md:min-h-[242px]" />
+      <div className="min-h-0 flex-1 animate-pulse rounded-[10px] bg-slate-100 md:h-[242px] md:min-h-[242px] md:flex-none" />
     </Card>
   );
 }
