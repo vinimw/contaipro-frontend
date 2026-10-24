@@ -10,6 +10,7 @@ import {
   setAccessToken,
   setStoredUser,
 } from "@/lib/auth";
+import { ApiError } from "@/lib/api";
 import { authService } from "@/services/auth.service";
 import type { AuthSession, LoginInput } from "@/types/auth";
 import type { User } from "@/types/user";
@@ -53,16 +54,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // With a stored user, render right away and validate /me in background.
+    const hasStoredUser = Boolean(getStoredUser());
+    if (hasStoredUser) {
+      setIsLoading(false);
+    }
+
     try {
       const currentUser = await authService.me();
       setStoredUser(currentUser);
       queryClient.setQueryData(queryKeys.currentUser, currentUser);
       setUserState(currentUser);
       setIsAuthenticated(true);
-    } catch {
-      clearSession();
-      setUserState(null);
-      setIsAuthenticated(false);
+    } catch (error) {
+      // 401 is already handled by the api interceptor (clear + redirect).
+      // Keep an optimistic session on transient failures.
+      const isUnauthorized = error instanceof ApiError && error.status === 401;
+      if (isUnauthorized || !hasStoredUser) {
+        clearSession();
+        setUserState(null);
+        setIsAuthenticated(false);
+      }
     } finally {
       setIsLoading(false);
     }
