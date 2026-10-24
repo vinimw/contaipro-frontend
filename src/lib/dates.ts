@@ -20,6 +20,13 @@ export function getCurrentMonth() {
   return `${today.getFullYear()}-${month}`;
 }
 
+export function getToday() {
+  const today = new Date();
+  const month = `${today.getMonth() + 1}`.padStart(2, "0");
+  const day = `${today.getDate()}`.padStart(2, "0");
+  return `${today.getFullYear()}-${month}-${day}`;
+}
+
 export function addMonth(value: string, amount = 1) {
   const date = toDateInput(value);
   date.setMonth(date.getMonth() + amount);

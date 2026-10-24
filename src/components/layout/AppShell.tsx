@@ -21,7 +21,6 @@ import {
 } from "@/components/dashboard/QuickExpenseForm";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Modal } from "@/components/ui/Modal";
-import { QUICK_EXPENSE_CREATED_EVENT } from "@/lib/events";
 import { cn } from "@/lib/utils";
 import { getCurrentMonth } from "@/lib/dates";
 import { queryKeys } from "@/lib/query-keys";
@@ -63,7 +62,6 @@ export function AppShell({
         queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(month) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() }),
       ]);
-      window.dispatchEvent(new Event(QUICK_EXPENSE_CREATED_EVENT));
       setQuickExpenseOpen(false);
     } catch (error) {
       setQuickExpenseError(
