@@ -14,6 +14,8 @@ export const queryKeys = {
     all: ["monthly-payments"] as const,
     month: (month: string) => ["monthly-payments", month] as const,
   },
+  overduePayments: ["overdue-payments"] as const,
+  notifications: ["notifications"] as const,
   quickExpenses: {
     all: ["quick-expenses"] as const,
     month: (month: string) => ["quick-expenses", month] as const,

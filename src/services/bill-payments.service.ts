@@ -3,6 +3,7 @@ import type {
   BillPayment,
   MonthlyItem,
   MonthlyPaymentsResponse,
+  OverdueBillPaymentsResponse,
 } from "@/types/bill-payment";
 
 function paymentToMonthlyItem(payment: BillPayment): MonthlyItem {
@@ -52,6 +53,11 @@ export const billPaymentsService = {
     );
 
     return normalizeMonthlyResponse(month, response);
+  },
+  listOverdue() {
+    return unwrapRequest<OverdueBillPaymentsResponse>(
+      api.get("/bill-payments/overdue"),
+    );
   },
   markAsPaid(id: string) {
     return unwrapRequest<BillPayment>(
