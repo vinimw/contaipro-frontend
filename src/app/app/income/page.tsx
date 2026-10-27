@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Pencil, Trash2 } from "lucide-react";
+import { BellRing, Loader2, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -18,8 +18,10 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { formatCurrencyBRL } from "@/lib/currency";
 import { formatDateBR, formatMonthLabel, getCurrentMonth } from "@/lib/dates";
 import { queryKeys } from "@/lib/query-keys";
+import { cn } from "@/lib/utils";
 import { extraIncomesService } from "@/services/extra-incomes.service";
 import { financialProfileService } from "@/services/financial-profile.service";
+import { notificationPreferencesService } from "@/services/notification-preferences.service";
 import type { ExtraIncome } from "@/types/extra-income";
 import type {
   FinancialProfileOverview,
@@ -57,6 +59,7 @@ export default function IncomePage() {
   const [incomeToDelete, setIncomeToDelete] = useState<ExtraIncome | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeletingProfilePeriod, setIsDeletingProfilePeriod] = useState(false);
+  const [isUpdatingIncomeReminder, setIsUpdatingIncomeReminder] = useState(false);
   const profileForm = useForm<ProfileFormInput, unknown, ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -82,9 +85,15 @@ export default function IncomePage() {
     queryKey: queryKeys.extraIncomes.month(currentMonth),
     queryFn: () => extraIncomesService.list(currentMonth),
   });
+  const preferencesQuery = useQuery({
+    queryKey: queryKeys.notificationPreferences,
+    queryFn: notificationPreferencesService.get,
+    staleTime: 5 * 60_000,
+  });
   const profileOverview = profileQuery.data ?? null;
   const items = incomesQuery.data ?? [];
-  const isLoading = profileQuery.isPending || incomesQuery.isPending;
+  const isLoading =
+    profileQuery.isPending || incomesQuery.isPending || preferencesQuery.isPending;
   const setProfileOverview = (profile: FinancialProfileOverview) =>
     queryClient.setQueryData(queryKeys.financialProfile, profile);
 
@@ -108,6 +117,7 @@ export default function IncomePage() {
       setProfileOverview(profile);
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
       setEditingProfilePeriod(null);
       profileForm.reset({
         monthly_income_amount:
@@ -145,6 +155,7 @@ export default function IncomePage() {
       setProfileOverview(profile);
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
 
       if (editingProfilePeriod?.id === profilePeriodToDelete.id) {
         setEditingProfilePeriod(null);
@@ -195,6 +206,39 @@ export default function IncomePage() {
     await incomesQuery.refetch();
     void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
+  }
+
+  async function toggleIncomeReminder() {
+    const preferences = preferencesQuery.data;
+
+    if (!preferences || isUpdatingIncomeReminder) {
+      return;
+    }
+
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsUpdatingIncomeReminder(true);
+
+    try {
+      const updated = await notificationPreferencesService.update({
+        income_reminder_enabled: !preferences.income_reminder_enabled,
+      });
+      queryClient.setQueryData(queryKeys.notificationPreferences, updated);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+      setSuccessMessage(
+        updated.income_reminder_enabled
+          ? "Lembrete de renda mensal ativado."
+          : "Lembrete de renda mensal desativado.",
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível atualizar o lembrete de renda.",
+      );
+    } finally {
+      setIsUpdatingIncomeReminder(false);
+    }
   }
 
   async function handleDelete() {
@@ -253,6 +297,9 @@ export default function IncomePage() {
         </div>
       ) : null}
       {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
+      {preferencesQuery.error ? (
+        <ErrorMessage message={preferencesQuery.error.message} />
+      ) : null}
       {isLoading ? <LoadingState label="Carregando dados de renda..." /> : null}
 
       {!isLoading ? (
@@ -329,6 +376,52 @@ export default function IncomePage() {
                 ) : null}
               </div>
             </form>
+
+            {preferencesQuery.data ? (
+              <div className="mt-6 rounded-[10px] border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-[var(--color-primary-soft)] text-[#071a3d]">
+                      <BellRing className="size-4.5" />
+                    </span>
+                    <div>
+                      <p className="font-semibold text-slate-950">
+                        Lembrete de renda mensal
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        Avise quando a renda mensal do mês atual ainda não estiver cadastrada.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    aria-checked={preferencesQuery.data.income_reminder_enabled}
+                    aria-label="Ativar lembrete de renda mensal"
+                    className={cn(
+                      "relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                      preferencesQuery.data.income_reminder_enabled
+                        ? "bg-[var(--color-primary)]"
+                        : "bg-slate-300",
+                    )}
+                    disabled={isUpdatingIncomeReminder}
+                    role="switch"
+                    type="button"
+                    onClick={() => void toggleIncomeReminder()}
+                  >
+                    <span
+                      className={cn(
+                        "absolute left-1 top-1 inline-flex size-5 items-center justify-center rounded-full bg-white shadow-sm transition-transform",
+                        preferencesQuery.data.income_reminder_enabled &&
+                          "translate-x-5",
+                      )}
+                    >
+                      {isUpdatingIncomeReminder ? (
+                        <Loader2 className="size-3 animate-spin text-slate-500" />
+                      ) : null}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="mt-6 space-y-3">
               <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-500">

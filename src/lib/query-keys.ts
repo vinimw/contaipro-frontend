@@ -16,6 +16,7 @@ export const queryKeys = {
   },
   overduePayments: ["overdue-payments"] as const,
   notifications: ["notifications"] as const,
+  notificationPreferences: ["notification-preferences"] as const,
   quickExpenses: {
     all: ["quick-expenses"] as const,
     month: (month: string) => ["quick-expenses", month] as const,
