@@ -2,9 +2,10 @@
 
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { Bell, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 import { BrandLogo } from "@/components/layout/BrandLogo";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -31,13 +32,7 @@ export function TopBar() {
     <header>
       <div className="flex items-center justify-between gap-4 md:hidden">
         <BrandLogo className="w-32" />
-        <button
-          aria-label="Notificações"
-          className="inline-flex size-9 items-center justify-center rounded-[10px] bg-[var(--color-brand-blue-soft)] text-[var(--color-brand-blue)]"
-          type="button"
-        >
-          <Bell className="size-4" />
-        </button>
+        <NotificationBell compact />
       </div>
 
       <div className="hidden items-start justify-between gap-4 md:flex">
@@ -51,9 +46,7 @@ export function TopBar() {
           <div className="rounded-[10px] bg-slate-100 px-5 py-3 text-base text-slate-700">
             {user?.name ? `Ola, ${user.name.split(" ")[0]}` : "Seu painel financeiro"}
           </div>
-          <span className="inline-flex size-12 items-center justify-center rounded-[10px] bg-[var(--color-brand-blue-soft)] text-[var(--color-brand-blue)]">
-            <Bell className="size-5" />
-          </span>
+          <NotificationBell />
           <Button className="min-h-0 px-0 py-0 text-base text-slate-600 hover:bg-transparent" variant="ghost" onClick={logout}>
             <LogOut className="mr-2 size-5" />
             Sair
