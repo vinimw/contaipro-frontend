@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 const titles: Record<string, string> = {
   "/app/dashboard": "Resumo do mes",
   "/app/monthly": "Mês a mês",
+  "/app/overdue": "Contas atrasadas",
   "/app/bills": "Contas fixas",
   "/app/income": "Renda e perfil",
   "/app/expenses": "Gastos rapidos",

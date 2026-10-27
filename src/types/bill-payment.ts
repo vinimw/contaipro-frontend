@@ -48,3 +48,18 @@ export type MonthlyPaymentsResponse = {
   quick_expenses: import("@/types/quick-expense").QuickExpense[];
   items: MonthlyItem[];
 };
+
+export type OverdueBillPayment = {
+  id: string;
+  bill_id: string;
+  bill_name: string;
+  reference_month: string;
+  due_date: string;
+  amount: number;
+};
+
+export type OverdueBillPaymentsResponse = {
+  items: OverdueBillPayment[];
+  total_count: number;
+  total_amount: number;
+};
