@@ -217,6 +217,7 @@ function MonthlyPageContent() {
       );
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(month) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
       setSuccessMessage(
         item.status === "paid"
           ? "Pagamento voltou para pendente."
