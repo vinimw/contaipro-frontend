@@ -49,7 +49,9 @@ export default function RegisterPage() {
         phone: normalizePhoneDigits(values.phone),
       });
       reset();
-      setMessage("Enviamos um e-mail de confirmacao para voce continuar seu cadastro.");
+      setMessage(
+        "Confira seu e-mail. Se for possível continuar o cadastro, você receberá um link com as próximas instruções. Verifique também a caixa de spam.",
+      );
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Nao foi possivel concluir o cadastro.");
     }
@@ -85,7 +87,11 @@ export default function RegisterPage() {
         />
         {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
         {message ? (
-          <div className="rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <div
+            aria-live="polite"
+            className="rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-700"
+            role="status"
+          >
             {message}
           </div>
         ) : null}
