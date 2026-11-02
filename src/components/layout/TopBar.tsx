@@ -32,7 +32,18 @@ export function TopBar() {
     <header>
       <div className="flex items-center justify-between gap-4 md:hidden">
         <BrandLogo className="w-32" />
-        <NotificationBell compact />
+        <div className="flex items-center gap-2">
+          <NotificationBell compact />
+          <Button
+            aria-label="Sair da conta"
+            className="size-10 min-h-0 rounded-[10px] p-0 text-slate-600"
+            title="Sair da conta"
+            variant="ghost"
+            onClick={logout}
+          >
+            <LogOut className="size-5" />
+          </Button>
+        </div>
       </div>
 
       <div className="hidden items-start justify-between gap-4 md:flex">
