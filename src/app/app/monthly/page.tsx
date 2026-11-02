@@ -27,6 +27,7 @@ import {
   addMonth,
   formatMonthLabel,
   getCurrentMonth,
+  getValidMonth,
   subtractMonth,
 } from "@/lib/dates";
 import { queryKeys } from "@/lib/query-keys";
@@ -63,14 +64,6 @@ const iconClasses: Record<BillPaymentStatus, string> = {
   pending: "bg-[var(--color-primary-soft)] text-[#071a3d]",
   overdue: "bg-rose-50 text-rose-600",
 };
-
-function getValidMonth(value: string | null) {
-  if (value && /^\d{4}-\d{2}$/.test(value)) {
-    return value;
-  }
-
-  return null;
-}
 
 function getTotals(items: MonthlyItem[]): PaymentTotals {
   return items.reduce(

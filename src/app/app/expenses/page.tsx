@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Trash2 } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 
 import {
   QuickExpenseForm,
@@ -13,15 +14,26 @@ import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { Input } from "@/components/ui/Input";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { formatCurrencyBRL } from "@/lib/currency";
-import { formatDateBR, getCurrentMonth } from "@/lib/dates";
+import {
+  addMonth,
+  formatDateBR,
+  formatMonthLabel,
+  getCurrentMonth,
+  getValidMonth,
+  subtractMonth,
+} from "@/lib/dates";
 import { queryKeys } from "@/lib/query-keys";
 import { quickExpensesService } from "@/services/quick-expenses.service";
 import type { QuickExpense } from "@/types/quick-expense";
 
-export default function ExpensesPage() {
-  const currentMonth = getCurrentMonth();
+function ExpensesPageContent() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const month = getValidMonth(searchParams.get("month")) ?? getCurrentMonth();
   const queryClient = useQueryClient();
   const [editingExpense, setEditingExpense] = useState<QuickExpense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<QuickExpense | null>(null);
@@ -30,20 +42,39 @@ export default function ExpensesPage() {
   const [successMessage, setSuccessMessage] = useState("");
 
   const expensesQuery = useQuery({
-    queryKey: queryKeys.quickExpenses.month(currentMonth),
-    queryFn: () => quickExpensesService.list(currentMonth),
+    queryKey: queryKeys.quickExpenses.month(month),
+    queryFn: () => quickExpensesService.list(month),
   });
   const items = expensesQuery.data ?? [];
   const isLoading = expensesQuery.isPending;
   const loadExpenses = async () => {
     await expensesQuery.refetch();
   };
+  const updateMonth = useCallback(
+    (nextMonth: string) => {
+      const validMonth = getValidMonth(nextMonth);
+
+      if (!validMonth) {
+        return;
+      }
+
+      const params = new URLSearchParams(searchParams);
+      params.set("month", validMonth);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   async function handleSubmit(values: QuickExpenseFormValues) {
     setErrorMessage("");
     setSuccessMessage("");
 
     try {
+      const previousMonth = editingExpense
+        ? editingExpense.expense_date?.slice(0, 7) ?? month
+        : null;
+      const expenseMonth = values.expense_date?.slice(0, 7) ?? month;
+
       if (editingExpense) {
         await quickExpensesService.update(editingExpense.id, {
           name: values.name,
@@ -62,8 +93,17 @@ export default function ExpensesPage() {
 
       setEditingExpense(null);
       await loadExpenses();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(currentMonth) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(currentMonth) });
+      for (const affectedMonth of new Set([previousMonth, expenseMonth])) {
+        if (!affectedMonth) {
+          continue;
+        }
+
+        if (affectedMonth !== month) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.quickExpenses.month(affectedMonth) });
+        }
+        void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(affectedMonth) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(affectedMonth) });
+      }
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
     } catch (error) {
       setErrorMessage(
@@ -93,8 +133,12 @@ export default function ExpensesPage() {
       setExpenseToDelete(null);
       setSuccessMessage("Gasto rapido removido.");
       await loadExpenses();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(currentMonth) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(currentMonth) });
+      const expenseMonth = expenseToDelete.expense_date?.slice(0, 7) ?? month;
+      if (expenseMonth !== month) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.quickExpenses.month(expenseMonth) });
+      }
+      void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(expenseMonth) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(expenseMonth) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Nao foi possivel remover o gasto.");
@@ -106,15 +150,36 @@ export default function ExpensesPage() {
   return (
     <div className="space-y-6">
       <Card>
-        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[var(--color-primary)]">
-          Gastos rapidos
-        </p>
-        <h1 className="mt-3 font-display text-3xl font-semibold text-slate-950">
-          Registre despesas do dia a dia
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Controle saídas pontuais sem precisar abrir uma conta recorrente.
-        </p>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[var(--color-primary)]">
+              Gastos rapidos
+            </p>
+            <h1 className="mt-3 font-display text-3xl font-semibold text-slate-950">
+              {formatMonthLabel(month)}
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Controle saídas pontuais sem precisar abrir uma conta recorrente.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-[auto_minmax(170px,210px)_auto]">
+            <Button variant="secondary" onClick={() => updateMonth(subtractMonth(month))}>
+              <ChevronLeft className="mr-1 size-4" />
+              Anterior
+            </Button>
+            <Input
+              aria-label="Selecionar mês dos gastos"
+              className="min-w-0 text-center"
+              type="month"
+              value={month}
+              onChange={(event) => updateMonth(event.target.value)}
+            />
+            <Button onClick={() => updateMonth(addMonth(month))}>
+              Próximo
+              <ChevronRight className="ml-1 size-4" />
+            </Button>
+          </div>
+        </div>
       </Card>
 
       {successMessage ? (
@@ -216,5 +281,13 @@ export default function ExpensesPage() {
         onConfirm={() => void handleDelete()}
       />
     </div>
+  );
+}
+
+export default function ExpensesPage() {
+  return (
+    <Suspense fallback={<LoadingState label="Carregando mês selecionado..." />}>
+      <ExpensesPageContent />
+    </Suspense>
   );
 }
