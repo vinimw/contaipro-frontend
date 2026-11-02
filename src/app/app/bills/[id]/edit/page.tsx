@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { BillForm } from "@/components/forms/BillForm";
 import { buttonStyles } from "@/components/ui/Button";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { billsService } from "@/services/bills.service";
+import { useBillMutations } from "@/hooks/useBillMutations";
 import type { Bill, BillPayload } from "@/types/bill";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -18,25 +19,22 @@ export default function EditBillPage() {
   const queryClient = useQueryClient();
   const params = useParams<{ id: string }>();
   const [errorMessage, setErrorMessage] = useState("");
+  const { update } = useBillMutations();
   const billQuery = useQuery({
     queryKey: queryKeys.bills.detail(params.id),
     queryFn: () => billsService.getById(params.id),
     initialData: () => queryClient.getQueryData<Bill[]>(queryKeys.bills.all)?.find((item) => item.id === params.id),
   });
-  const updateMutation = useMutation({ mutationFn: (payload: BillPayload) => billsService.update(params.id, payload) });
 
   async function handleSubmit(payload: BillPayload) {
     setErrorMessage("");
 
     try {
-      const updatedBill = await updateMutation.mutateAsync(payload);
+      const updatedBill = await update.mutateAsync({ id: params.id, payload });
       queryClient.setQueryData(queryKeys.bills.detail(params.id), updatedBill);
       queryClient.setQueryData<Bill[]>(queryKeys.bills.all, (current = []) =>
         current.map((item) => (item.id === params.id ? updatedBill : item)),
       );
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.all });
       router.replace("/app/bills");
     } catch (error) {
       setErrorMessage(

@@ -2,15 +2,6 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  Banknote,
-  Landmark,
-  LayoutDashboard,
-  CalendarDays,
-  ReceiptText,
-  Settings,
-} from "lucide-react";
 
 import { BrandLogo } from "@/components/layout/BrandLogo";
 import { BottomNavigation } from "@/components/layout/BottomNavigation";
@@ -22,17 +13,8 @@ import { QuickExpenseContext } from "@/hooks/useQuickExpense";
 import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
 import { getCurrentMonth } from "@/lib/dates";
-import { queryKeys } from "@/lib/query-keys";
-import { quickExpensesService } from "@/services/quick-expenses.service";
-
-const navigation = [
-  { href: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/app/monthly", label: "Mês a mês", icon: CalendarDays },
-  { href: "/app/bills", label: "Contas", icon: Landmark },
-  { href: "/app/income", label: "Renda", icon: Banknote },
-  { href: "/app/expenses", label: "Gastos", icon: ReceiptText },
-  { href: "/app/settings", label: "Configuracoes", icon: Settings },
-];
+import { appNavigation } from "@/lib/navigation";
+import { useExpenseMutations } from "@/hooks/useExpenseMutations";
 
 export function AppShell({
   pathname,
@@ -41,7 +23,7 @@ export function AppShell({
   pathname: string;
   children: React.ReactNode;
 }) {
-  const queryClient = useQueryClient();
+  const { create: createExpense } = useExpenseMutations();
   const [quickExpenseOpen, setQuickExpenseOpen] = useState(false);
   const [quickExpenseError, setQuickExpenseError] = useState("");
 
@@ -55,22 +37,12 @@ export function AppShell({
     setQuickExpenseError("");
 
     try {
-      await quickExpensesService.create({
-        name: values.name,
-        amount: values.amount,
-        expense_date: values.expense_date || null,
-      });
       const month = values.expense_date?.slice(0, 7) || getCurrentMonth();
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.quickExpenses.month(month) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(month) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(month) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() }),
-      ]);
+      await createExpense.mutateAsync({ month, payload: { name: values.name, amount: values.amount, expense_date: values.expense_date || null } });
       setQuickExpenseOpen(false);
     } catch (error) {
       setQuickExpenseError(
-        error instanceof Error ? error.message : "Nao foi possivel criar o gasto rapido.",
+        error instanceof Error ? error.message : "Não foi possível criar o gasto rápido.",
       );
     }
   }
@@ -83,7 +55,7 @@ export function AppShell({
             <BrandLogo className="w-52" />
           </div>
           <nav className="mt-12 space-y-5">
-              {navigation.map(({ href, icon: Icon, label }) => {
+              {appNavigation.map(({ href, icon: Icon, label }) => {
                 const active = pathname.startsWith(href);
 
                 return (
@@ -111,7 +83,7 @@ export function AppShell({
         <BottomNavigation onQuickExpenseClick={openQuickExpense} />
         <Modal
           open={quickExpenseOpen}
-          title="Novo gasto rapido"
+          title="Novo gasto rápido"
           onClose={() => setQuickExpenseOpen(false)}
         >
           <div className="space-y-4">

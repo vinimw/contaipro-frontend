@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 
@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Input } from "@/components/ui/Input";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { SuccessMessage } from "@/components/ui/SuccessMessage";
 import { formatCurrencyBRL } from "@/lib/currency";
 import {
   addMonth,
@@ -27,6 +28,8 @@ import {
 } from "@/lib/dates";
 import { queryKeys } from "@/lib/query-keys";
 import { quickExpensesService } from "@/services/quick-expenses.service";
+import { useExpenseMutations } from "@/hooks/useExpenseMutations";
+import { useFinanceInvalidation } from "@/hooks/useFinanceInvalidation";
 import type { QuickExpense } from "@/types/quick-expense";
 
 function ExpensesPageContent() {
@@ -34,7 +37,8 @@ function ExpensesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const month = getValidMonth(searchParams.get("month")) ?? getCurrentMonth();
-  const queryClient = useQueryClient();
+  const expenseMutations = useExpenseMutations();
+  const { invalidateMonth } = useFinanceInvalidation();
   const [editingExpense, setEditingExpense] = useState<QuickExpense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<QuickExpense | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -76,40 +80,29 @@ function ExpensesPageContent() {
       const expenseMonth = values.expense_date?.slice(0, 7) ?? month;
 
       if (editingExpense) {
-        await quickExpensesService.update(editingExpense.id, {
+        await expenseMutations.update.mutateAsync({ id: editingExpense.id, month: expenseMonth, payload: {
           name: values.name,
           amount: values.amount,
           expense_date: values.expense_date || null,
-        });
-        setSuccessMessage("Gasto rapido atualizado.");
+        } });
+        setSuccessMessage("Gasto rápido atualizado.");
       } else {
-        await quickExpensesService.create({
+        await expenseMutations.create.mutateAsync({ month: expenseMonth, payload: {
           name: values.name,
           amount: values.amount,
           expense_date: values.expense_date || null,
-        });
-        setSuccessMessage("Gasto rapido criado.");
+        } });
+        setSuccessMessage("Gasto rápido criado.");
       }
 
       setEditingExpense(null);
       await loadExpenses();
-      for (const affectedMonth of new Set([previousMonth, expenseMonth])) {
-        if (!affectedMonth) {
-          continue;
-        }
-
-        if (affectedMonth !== month) {
-          void queryClient.invalidateQueries({ queryKey: queryKeys.quickExpenses.month(affectedMonth) });
-        }
-        void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(affectedMonth) });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(affectedMonth) });
-      }
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
+      if (previousMonth && previousMonth !== expenseMonth) await invalidateMonth(previousMonth, { expenses: true });
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel salvar o gasto.",
+          : "Não foi possível salvar o gasto.",
       );
     }
   }
@@ -124,24 +117,18 @@ function ExpensesPageContent() {
     setIsDeleting(true);
 
     try {
-      await quickExpensesService.remove(expenseToDelete.id);
+      const expenseMonth = expenseToDelete.expense_date?.slice(0, 7) ?? month;
+      await expenseMutations.remove.mutateAsync({ id: expenseToDelete.id, month: expenseMonth });
 
       if (editingExpense?.id === expenseToDelete.id) {
         setEditingExpense(null);
       }
 
       setExpenseToDelete(null);
-      setSuccessMessage("Gasto rapido removido.");
+      setSuccessMessage("Gasto rápido removido.");
       await loadExpenses();
-      const expenseMonth = expenseToDelete.expense_date?.slice(0, 7) ?? month;
-      if (expenseMonth !== month) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.quickExpenses.month(expenseMonth) });
-      }
-      void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(expenseMonth) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(expenseMonth) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Nao foi possivel remover o gasto.");
+      setErrorMessage(error instanceof Error ? error.message : "Não foi possível remover o gasto.");
     } finally {
       setIsDeleting(false);
     }
@@ -153,7 +140,7 @@ function ExpensesPageContent() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[var(--color-primary)]">
-              Gastos rapidos
+              Gastos rápidos
             </p>
             <h1 className="mt-3 font-display text-3xl font-semibold text-slate-950">
               {formatMonthLabel(month)}
@@ -182,11 +169,7 @@ function ExpensesPageContent() {
         </div>
       </Card>
 
-      {successMessage ? (
-        <div className="rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {successMessage}
-        </div>
-      ) : null}
+      <SuccessMessage message={successMessage} />
       {errorMessage || expensesQuery.error ? (
         <ErrorMessage message={errorMessage || expensesQuery.error?.message || "Erro ao carregar gastos."} />
       ) : null}
@@ -194,10 +177,10 @@ function ExpensesPageContent() {
       <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
         <Card>
           <h2 className="font-display text-xl font-semibold text-slate-950">
-            {editingExpense ? "Editar gasto rapido" : "Novo gasto rapido"}
+            {editingExpense ? "Editar gasto rápido" : "Novo gasto rápido"}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Use um formulario curto para registrar o que saiu do caixa neste mes.
+            Use um formulário curto para registrar o que saiu do caixa neste mês.
           </p>
           <div className="mt-5">
             <QuickExpenseForm
@@ -211,12 +194,12 @@ function ExpensesPageContent() {
                     }
                   : undefined
               }
-              submitLabel={editingExpense ? "Salvar alteracoes" : "Adicionar gasto"}
+              submitLabel={editingExpense ? "Salvar alterações" : "Adicionar gasto"}
               onSubmit={handleSubmit}
             />
             {editingExpense ? (
               <Button className="mt-3 w-full" variant="ghost" onClick={() => setEditingExpense(null)}>
-                Cancelar edicao
+                Cancelar edição
               </Button>
             ) : null}
           </div>
@@ -226,8 +209,8 @@ function ExpensesPageContent() {
           {isLoading ? <LoadingState label="Carregando gastos..." /> : null}
           {!isLoading && !items.length ? (
             <EmptyState
-              title="Nenhum gasto encontrado neste mes"
-              description="Adicione um gasto rapido para manter o saldo previsto mais fiel."
+              title="Nenhum gasto encontrado neste mês"
+              description="Adicione um gasto rápido para manter o saldo previsto mais fiel."
             />
           ) : null}
           {!isLoading

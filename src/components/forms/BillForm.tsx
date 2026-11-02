@@ -21,12 +21,12 @@ const billSchema = z
     amount: z.coerce.number().positive("Informe um valor maior que zero."),
     due_day: z.coerce
       .number()
-      .int("Use um dia valido.")
+      .int("Use um dia válido.")
       .min(1, "Use um dia entre 1 e 31.")
       .max(31, "Use um dia entre 1 e 31."),
     bill_type: z.enum(["single", "fixed"]),
     recurrence_type: z.enum(["none", "monthly_forever", "monthly_until_date"]),
-    start_month: z.string().min(7, "Informe o mes inicial."),
+    start_month: z.string().min(7, "Informe o mês inicial."),
     end_date: z.string().optional(),
     auto_pay: z.boolean(),
   })
@@ -64,7 +64,7 @@ const billSchema = z
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["end_date"],
-        message: "A data final nao pode ser anterior ao mes inicial.",
+        message: "A data final não pode ser anterior ao mês inicial.",
       });
     }
   });
@@ -182,7 +182,7 @@ export function BillForm({
             <option value="single">Avulsa</option>
           </Select>
           <Input
-            label="Mes inicial"
+            label="Mês inicial"
             type="month"
             error={errors.start_month?.message}
             {...register("start_month")}
@@ -197,7 +197,7 @@ export function BillForm({
           >
             {billType === "single" ? <option value="none">Nenhuma</option> : null}
             <option value="monthly_forever">Mensal para sempre</option>
-            <option value="monthly_until_date">Mensal ate data final</option>
+            <option value="monthly_until_date">Mensal até a data final</option>
           </Select>
           {recurrenceType === "monthly_until_date" ? (
             <Input

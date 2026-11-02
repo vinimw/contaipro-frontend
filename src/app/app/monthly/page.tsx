@@ -22,6 +22,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Input } from "@/components/ui/Input";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { SuccessMessage } from "@/components/ui/SuccessMessage";
 import { formatCurrencyBRL } from "@/lib/currency";
 import {
   addMonth,
@@ -32,8 +33,10 @@ import {
 } from "@/lib/dates";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
+import { paymentStatus } from "@/lib/payment-status";
 import { billPaymentsService } from "@/services/bill-payments.service";
-import { quickExpensesService } from "@/services/quick-expenses.service";
+import { usePaymentMutations } from "@/hooks/usePaymentMutations";
+import { useExpenseMutations } from "@/hooks/useExpenseMutations";
 import type {
   BillPayment,
   BillPaymentStatus,
@@ -45,18 +48,6 @@ type PaymentTotals = {
   pending: number;
   overdue: number;
   total: number;
-};
-
-const statusLabel: Record<BillPaymentStatus, string> = {
-  paid: "Pago",
-  pending: "Agendado",
-  overdue: "Urgente",
-};
-
-const statusClasses: Record<BillPaymentStatus, string> = {
-  paid: "bg-emerald-50 text-emerald-700",
-  pending: "bg-slate-100 text-slate-600",
-  overdue: "bg-rose-50 text-rose-700",
 };
 
 const iconClasses: Record<BillPaymentStatus, string> = {
@@ -137,6 +128,8 @@ function MonthlyPageContent() {
   const searchParams = useSearchParams();
   const month = getValidMonth(searchParams.get("month")) ?? getCurrentMonth();
   const queryClient = useQueryClient();
+  const paymentMutations = usePaymentMutations(month);
+  const expenseMutations = useExpenseMutations();
   const [busyPaymentIds, setBusyPaymentIds] = useState<Set<string>>(() => new Set());
   const busyPaymentIdsRef = useRef<Set<string>>(new Set());
   const [itemToDelete, setItemToDelete] = useState<MonthlyItem | null>(null);
@@ -198,8 +191,8 @@ function MonthlyPageContent() {
     try {
       const updatedPayment =
         item.status === "paid"
-          ? await billPaymentsService.markAsPending(item.id)
-          : await billPaymentsService.markAsPaid(item.id);
+          ? await paymentMutations.markAsPending.mutateAsync(item.id)
+          : await paymentMutations.markAsPaid.mutateAsync(item.id);
 
       setItems((currentItems) =>
         currentItems.map((currentItem) =>
@@ -208,9 +201,6 @@ function MonthlyPageContent() {
             : currentItem,
         ),
       );
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(month) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
       setSuccessMessage(
         item.status === "paid"
           ? "Pagamento voltou para pendente."
@@ -239,19 +229,14 @@ function MonthlyPageContent() {
 
     try {
       if (itemToDelete.item_type === "bill_payment") {
-        await billPaymentsService.remove(itemToDelete.id);
+        await paymentMutations.remove.mutateAsync(itemToDelete.id);
       } else {
-        await quickExpensesService.remove(itemToDelete.id);
+        await expenseMutations.remove.mutateAsync({ id: itemToDelete.id, month });
       }
 
       setItems((currentItems) =>
         currentItems.filter((currentItem) => currentItem.id !== itemToDelete.id),
       );
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(month) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
-      if (itemToDelete.item_type === "quick_expense") {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.quickExpenses.month(month) });
-      }
       setItemToDelete(null);
       setSuccessMessage("Gasto removido com sucesso.");
     } catch (error) {
@@ -308,11 +293,7 @@ function MonthlyPageContent() {
         </div>
       </Card>
 
-      {successMessage ? (
-        <div className="rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {successMessage}
-        </div>
-      ) : null}
+      <SuccessMessage message={successMessage} />
       {errorMessage || paymentsQuery.error ? (
         <ErrorMessage message={errorMessage || paymentsQuery.error?.message || "Erro ao carregar pagamentos do mês."} />
       ) : null}
@@ -404,10 +385,10 @@ function MonthlyPageContent() {
                         <span
                           className={cn(
                             "shrink-0 rounded-[10px] px-2 py-1 text-[0.68rem] font-extrabold uppercase leading-none md:rounded-[10px] md:px-2 md:py-1 md:text-[0.65rem]",
-                            item.status ? statusClasses[item.status] : "bg-[var(--color-brand-blue-soft)] text-[var(--color-brand-blue)]",
+                            item.status ? paymentStatus[item.status].classes : "bg-[var(--color-brand-blue-soft)] text-[var(--color-brand-blue)]",
                           )}
                         >
-                          {item.status ? statusLabel[item.status] : "Gasto"}
+                          {item.status ? paymentStatus[item.status].label : "Gasto"}
                         </span>
                       </div>
                       <p className="mt-1 text-xs font-medium text-slate-500 md:text-[0.72rem]">

@@ -87,9 +87,6 @@ export function useDashboard(month: string) {
 
       return recalculatePaymentSummary(nextData);
     });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(month) });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
   }
 
   return {

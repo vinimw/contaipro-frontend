@@ -8,7 +8,7 @@ export const queryKeys = {
     all: ["dashboard"] as const,
     month: (month: string) => ["dashboard", month] as const,
     chart: (monthsBack = 6, monthsForward = 3) =>
-      ["dashboard-chart", monthsBack, monthsForward] as const,
+      ["dashboard", "chart", monthsBack, monthsForward] as const,
   },
   monthlyPayments: {
     all: ["monthly-payments"] as const,

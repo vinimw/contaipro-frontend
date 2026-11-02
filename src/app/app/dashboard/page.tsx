@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   BadgeDollarSign,
   Banknote,
@@ -31,6 +30,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { SuccessMessage } from "@/components/ui/SuccessMessage";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useQuickExpense } from "@/hooks/useQuickExpense";
 import { formatCurrencyBRL } from "@/lib/currency";
@@ -41,8 +41,8 @@ import {
   getCurrentMonth,
   subtractMonth,
 } from "@/lib/dates";
-import { queryKeys } from "@/lib/query-keys";
-import { billPaymentsService } from "@/services/bill-payments.service";
+import { usePaymentMutations } from "@/hooks/usePaymentMutations";
+import { paymentStatus } from "@/lib/payment-status";
 import type { BillPayment } from "@/types/bill-payment";
 
 // recharts is heavy, so keep it out of the dashboard's initial bundle.
@@ -69,30 +69,6 @@ const iconTone = {
   cyan: "bg-[#d9efff] text-[#087694]",
 };
 
-function statusTone(status: BillPayment["status"]) {
-  if (status === "paid") {
-    return "paid";
-  }
-
-  if (status === "overdue") {
-    return "overdue";
-  }
-
-  return "pending";
-}
-
-function statusLabel(status: BillPayment["status"]) {
-  if (status === "paid") {
-    return "Pago";
-  }
-
-  if (status === "overdue") {
-    return "Urgente";
-  }
-
-  return "Agendado";
-}
-
 const desktopQuery = "(min-width: 768px)";
 
 function subscribeToDesktop(onChange: () => void) {
@@ -112,7 +88,6 @@ function useIsDesktop() {
 }
 
 export default function DashboardPage() {
-  const queryClient = useQueryClient();
   const [month, setMonth] = useState(getCurrentMonth());
   const [busyPaymentId, setBusyPaymentId] = useState<string | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<BillPayment | null>(null);
@@ -123,6 +98,7 @@ export default function DashboardPage() {
     useDashboard(month);
   const isDesktop = useIsDesktop();
   const { openQuickExpense } = useQuickExpense();
+  const paymentMutations = usePaymentMutations(month);
 
   const firstPayment = data.bill_payments[0];
   const secondaryPayments = data.bill_payments.slice(1, 3);
@@ -136,8 +112,8 @@ export default function DashboardPage() {
     try {
       const updatedPayment =
         item.status === "paid"
-          ? await billPaymentsService.markAsPending(item.id)
-          : await billPaymentsService.markAsPaid(item.id);
+          ? await paymentMutations.markAsPending.mutateAsync(item.id)
+          : await paymentMutations.markAsPaid.mutateAsync(item.id);
 
       updatePayment(updatedPayment);
 
@@ -151,7 +127,7 @@ export default function DashboardPage() {
       setActionError(
         requestError instanceof Error
           ? requestError.message
-          : "Nao foi possivel atualizar o status do pagamento.",
+          : "Não foi possível atualizar o status do pagamento.",
       );
     } finally {
       setBusyPaymentId(null);
@@ -168,17 +144,14 @@ export default function DashboardPage() {
     setDeletingPaymentId(paymentToDelete.id);
 
     try {
-      await billPaymentsService.remove(paymentToDelete.id);
+      await paymentMutations.remove.mutateAsync(paymentToDelete.id);
       setPaymentToDelete(null);
       setSuccessMessage("Pagamento removido com sucesso.");
-      void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(month) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(month) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
     } catch (requestError) {
       setActionError(
         requestError instanceof Error
           ? requestError.message
-          : "Nao foi possivel remover o pagamento.",
+          : "Não foi possível remover o pagamento.",
       );
     } finally {
       setDeletingPaymentId(null);
@@ -198,7 +171,7 @@ export default function DashboardPage() {
           <p className="mt-1 text-xs text-slate-600 md:hidden">Confira o resumo mensal de suas financas.</p>
           <p className="mt-3 hidden max-w-xl text-sm leading-6 text-slate-600 md:block">
             Veja o que ja foi pago, o que ficou pendente e o impacto das despesas
-            rapidas no saldo previsto do mes.
+            rápidas no saldo previsto do mês.
           </p>
         </div>
 
@@ -206,26 +179,22 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 gap-3 md:gap-0 md:overflow-hidden md:rounded-[10px] md:bg-slate-100">
             <Button className="min-h-11 rounded-[10px] bg-slate-100 text-xs font-semibold text-slate-700 shadow-none hover:bg-slate-200 md:min-h-12 md:bg-transparent md:px-4 md:text-sm md:text-slate-900" onClick={() => setMonth(subtractMonth(month))}>
               <ChevronLeft className="mr-1 size-4 md:mr-2" />
-              Mes anterior
+              Mês anterior
             </Button>
             <Button className="min-h-11 rounded-[10px] bg-[var(--color-primary)] text-xs font-semibold text-[#071a3d] shadow-none hover:bg-[var(--color-primary-strong)] hover:text-white md:min-h-12 md:bg-transparent md:px-4 md:text-sm md:text-slate-900 md:hover:bg-slate-200 md:hover:text-slate-900" onClick={() => setMonth(addMonth(month))}>
-              Proximo mes
+              Próximo mês
               <ChevronRight className="ml-1 size-4 md:ml-2" />
             </Button>
           </div>
           <Button className="mt-3 min-h-12 w-full rounded-[10px] bg-[var(--color-brand-blue)] text-xs font-semibold capitalize text-white shadow-none hover:bg-[#002f70] md:mt-0 md:w-auto md:bg-[var(--color-primary)] md:px-5 md:text-sm md:font-bold md:normal-case md:text-[#071a3d] md:hover:bg-[var(--color-primary-strong)] md:hover:text-white" onClick={openQuickExpense}>
             <Plus className="mr-2 size-4 md:hidden" />
             <Zap className="mr-2 hidden size-5 fill-white md:block" />
-            Gasto rapido
+            Gasto rápido
           </Button>
         </div>
       </section>
 
-      {successMessage ? (
-        <div className="rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {successMessage}
-        </div>
-      ) : null}
+      <SuccessMessage message={successMessage} />
       {actionError ? <ErrorMessage message={actionError} /> : null}
 
       {isLoading ? <LoadingState label="Carregando dashboard..." /> : null}
@@ -357,8 +326,8 @@ export default function DashboardPage() {
                             <h3 className="text-lg font-extrabold text-slate-900">
                               {firstPayment.bill_name ?? "Conta mensal"}
                             </h3>
-                            <Badge className="px-2 py-0.5 text-[8px]" tone={statusTone(firstPayment.status)}>
-                              {statusLabel(firstPayment.status)}
+                            <Badge className="px-2 py-0.5 text-[8px]" tone={paymentStatus[firstPayment.status].tone}>
+                              {paymentStatus[firstPayment.status].label}
                             </Badge>
                           </div>
                           <p className="mt-3 text-2xl font-extrabold text-[var(--color-primary-strong)]">
@@ -397,9 +366,9 @@ export default function DashboardPage() {
                         <p className="text-sm font-extrabold text-slate-900">{formatCurrencyBRL(item.amount)}</p>
                         <Badge
                           className="mt-1 px-2 py-0.5 text-[8px] uppercase"
-                          tone={statusTone(item.status)}
+                          tone={paymentStatus[item.status].tone}
                         >
-                          {statusLabel(item.status)}
+                          {paymentStatus[item.status].label}
                         </Badge>
                       </div>
                     </div>

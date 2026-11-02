@@ -3,26 +3,10 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Banknote,
-  CalendarDays,
-  Landmark,
-  LayoutDashboard,
-  Plus,
-  ReceiptText,
-  Settings,
-} from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-
-const navigation = [
-  { href: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/app/monthly", label: "Mes a mes", icon: CalendarDays },
-  { href: "/app/bills", label: "Contas", icon: Landmark },
-  { href: "/app/income", label: "Renda", icon: Banknote },
-  { href: "/app/expenses", label: "Gastos", icon: ReceiptText },
-  { href: "/app/settings", label: "Ajustes", icon: Settings },
-];
+import { appNavigation } from "@/lib/navigation";
 
 export function BottomNavigation({
   onQuickExpenseClick,
@@ -34,7 +18,7 @@ export function BottomNavigation({
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-100 bg-white px-3 pb-4 pt-2 shadow-[0_-10px_28px_rgba(15,23,42,0.08)] md:hidden">
       <ul className="grid grid-cols-7 items-end gap-0.5">
-        {navigation.map(({ href, icon: Icon, label }) => {
+        {appNavigation.map(({ href, icon: Icon, shortLabel: label }) => {
           const active = pathname.startsWith(href);
           const insertAction = href === "/app/income";
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
@@ -12,10 +12,12 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { SuccessMessage } from "@/components/ui/SuccessMessage";
 import { formatCurrencyBRL } from "@/lib/currency";
 import { formatDateBR } from "@/lib/dates";
 import { queryKeys } from "@/lib/query-keys";
 import { billsService } from "@/services/bills.service";
+import { useBillMutations } from "@/hooks/useBillMutations";
 import type { Bill, RecurrenceType } from "@/types/bill";
 
 const recurrenceLabels: Record<Exclude<RecurrenceType, "monthly_until_date">, string> = {
@@ -38,7 +40,7 @@ export default function BillsPage() {
   const [successMessage, setSuccessMessage] = useState("");
 
   const billsQuery = useQuery({ queryKey: queryKeys.bills.all, queryFn: billsService.list });
-  const deleteMutation = useMutation({ mutationFn: billsService.remove });
+  const { remove: deleteMutation } = useBillMutations();
   const items = billsQuery.data ?? [];
   const isLoading = billsQuery.isPending;
   const isDeleting = deleteMutation.isPending;
@@ -55,9 +57,6 @@ export default function BillsPage() {
       queryClient.setQueryData<Bill[]>(queryKeys.bills.all, (current = []) =>
         current.filter((item) => item.id !== billToDelete.id),
       );
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.all });
       setBillToDelete(null);
       setSuccessMessage("Conta removida com sucesso.");
     } catch (error) {
@@ -85,11 +84,7 @@ export default function BillsPage() {
         </Link>
       </Card>
 
-      {successMessage ? (
-        <div className="rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {successMessage}
-        </div>
-      ) : null}
+      <SuccessMessage message={successMessage} />
       {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
       {isLoading ? <LoadingState label="Carregando contas..." /> : null}
 
