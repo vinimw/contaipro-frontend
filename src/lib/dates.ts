@@ -26,6 +26,10 @@ export function getCurrentMonth() {
   return `${today.getFullYear()}-${month}`;
 }
 
+export function getValidMonth(value: string | null | undefined) {
+  return value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? value : null;
+}
+
 export function getToday() {
   const today = new Date();
   const month = `${today.getMonth() + 1}`.padStart(2, "0");

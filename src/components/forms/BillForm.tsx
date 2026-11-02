@@ -11,6 +11,7 @@ import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { getCurrentMonth } from "@/lib/dates";
 import type { Bill, BillPayload } from "@/types/bill";
 
 const billSchema = z
@@ -79,7 +80,7 @@ function toDefaultValues(initialValues?: Bill): BillFormValues {
     due_day: initialValues?.due_day ?? 1,
     bill_type: initialValues?.bill_type ?? "fixed",
     recurrence_type: initialValues?.recurrence_type ?? "monthly_forever",
-    start_month: initialValues?.start_month ?? new Date().toISOString().slice(0, 7),
+    start_month: initialValues?.start_month ?? getCurrentMonth(),
     end_date: initialValues?.end_date?.slice(0, 10) ?? "",
     auto_pay: initialValues?.auto_pay ?? false,
   };

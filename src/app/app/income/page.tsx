@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { BellRing, Loader2, Pencil, Trash2 } from "lucide-react";
+import { BellRing, ChevronLeft, ChevronRight, Loader2, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -16,7 +17,14 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Input } from "@/components/ui/Input";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { formatCurrencyBRL } from "@/lib/currency";
-import { formatDateBR, formatMonthLabel, getCurrentMonth } from "@/lib/dates";
+import {
+  addMonth,
+  formatDateBR,
+  formatMonthLabel,
+  getCurrentMonth,
+  getValidMonth,
+  subtractMonth,
+} from "@/lib/dates";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 import { extraIncomesService } from "@/services/extra-incomes.service";
@@ -46,8 +54,12 @@ type ExtraIncomeFormValues = z.infer<typeof extraIncomeSchema>;
 type ProfileFormInput = z.input<typeof profileSchema>;
 type ExtraIncomeFormInput = z.input<typeof extraIncomeSchema>;
 
-export default function IncomePage() {
+function IncomePageContent() {
   const currentMonth = getCurrentMonth();
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const month = getValidMonth(searchParams.get("month")) ?? currentMonth;
   const queryClient = useQueryClient();
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -82,8 +94,8 @@ export default function IncomePage() {
     staleTime: 5 * 60_000,
   });
   const incomesQuery = useQuery({
-    queryKey: queryKeys.extraIncomes.month(currentMonth),
-    queryFn: () => extraIncomesService.list(currentMonth),
+    queryKey: queryKeys.extraIncomes.month(month),
+    queryFn: () => extraIncomesService.list(month),
   });
   const preferencesQuery = useQuery({
     queryKey: queryKeys.notificationPreferences,
@@ -96,6 +108,20 @@ export default function IncomePage() {
     profileQuery.isPending || incomesQuery.isPending || preferencesQuery.isPending;
   const setProfileOverview = (profile: FinancialProfileOverview) =>
     queryClient.setQueryData(queryKeys.financialProfile, profile);
+  const updateMonth = useCallback(
+    (nextMonth: string) => {
+      const validMonth = getValidMonth(nextMonth);
+
+      if (!validMonth) {
+        return;
+      }
+
+      const params = new URLSearchParams(searchParams);
+      params.set("month", validMonth);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   useEffect(() => {
     if (profileQuery.data) {
@@ -183,6 +209,11 @@ export default function IncomePage() {
     setSuccessMessage("");
 
     try {
+      const previousMonth = editingIncome
+        ? editingIncome.income_date?.slice(0, 7) ?? month
+        : null;
+      const incomeMonth = values.income_date?.slice(0, 7) ?? month;
+
       if (editingIncome) {
         await extraIncomesService.update(editingIncome.id, {
           name: values.name,
@@ -206,6 +237,14 @@ export default function IncomePage() {
       });
       setEditingIncome(null);
       await incomesQuery.refetch();
+      for (const affectedMonth of new Set([previousMonth, incomeMonth])) {
+        if (affectedMonth) {
+          if (affectedMonth !== month) {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.extraIncomes.month(affectedMonth) });
+          }
+          void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(affectedMonth) });
+        }
+      }
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
     } catch (error) {
@@ -274,6 +313,11 @@ export default function IncomePage() {
       setIncomeToDelete(null);
       setSuccessMessage("Renda extra removida.");
       await incomesQuery.refetch();
+      const incomeMonth = incomeToDelete.income_date?.slice(0, 7) ?? month;
+      if (incomeMonth !== month) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.extraIncomes.month(incomeMonth) });
+      }
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(incomeMonth) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
     } catch (error) {
@@ -289,15 +333,36 @@ export default function IncomePage() {
   return (
     <div className="space-y-6">
       <Card>
-        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[var(--color-primary)]">
-          Renda
-        </p>
-        <h1 className="mt-3 font-display text-2xl font-semibold text-slate-950">
-          Perfil financeiro e entradas extras
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Atualize sua renda fixa e registre valores extras que entram ao longo do mes.
-        </p>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[var(--color-primary)]">
+              Renda
+            </p>
+            <h1 className="mt-3 font-display text-2xl font-semibold text-slate-950">
+              Perfil financeiro e entradas de {formatMonthLabel(month)}
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Atualize sua renda fixa e registre valores extras do mês selecionado.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-[auto_minmax(170px,210px)_auto]">
+            <Button variant="secondary" onClick={() => updateMonth(subtractMonth(month))}>
+              <ChevronLeft className="mr-1 size-4" />
+              Anterior
+            </Button>
+            <Input
+              aria-label="Selecionar mês das rendas"
+              className="min-w-0 text-center"
+              type="month"
+              value={month}
+              onChange={(event) => updateMonth(event.target.value)}
+            />
+            <Button onClick={() => updateMonth(addMonth(month))}>
+              Próximo
+              <ChevronRight className="ml-1 size-4" />
+            </Button>
+          </div>
+        </div>
       </Card>
 
       {successMessage ? (
@@ -512,7 +577,7 @@ export default function IncomePage() {
               <div>
                 <h2 className="font-display text-xl font-semibold text-slate-950">Renda extra</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Adicione entradas ocasionais para o mes atual.
+                  Adicione entradas ocasionais para {formatMonthLabel(month)}.
                 </p>
               </div>
             </div>
@@ -639,5 +704,13 @@ export default function IncomePage() {
         onConfirm={() => void handleDelete()}
       />
     </div>
+  );
+}
+
+export default function IncomePage() {
+  return (
+    <Suspense fallback={<LoadingState label="Carregando mês selecionado..." />}>
+      <IncomePageContent />
+    </Suspense>
   );
 }
