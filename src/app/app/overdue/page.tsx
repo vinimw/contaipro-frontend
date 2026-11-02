@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { SuccessMessage } from "@/components/ui/SuccessMessage";
 import { formatCurrencyBRL } from "@/lib/currency";
 import { formatDateBR, formatMonthLabel } from "@/lib/dates";
 import { queryKeys } from "@/lib/query-keys";
@@ -23,9 +24,11 @@ import type {
   OverdueBillPayment,
   OverdueBillPaymentsResponse,
 } from "@/types/bill-payment";
+import { useOverduePaymentMutation } from "@/hooks/usePaymentMutations";
 
 export default function OverdueBillsPage() {
   const queryClient = useQueryClient();
+  const markPaidMutation = useOverduePaymentMutation();
   const [busyPaymentId, setBusyPaymentId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [actionError, setActionError] = useState("");
@@ -44,7 +47,7 @@ export default function OverdueBillsPage() {
     setActionError("");
 
     try {
-      await billPaymentsService.markAsPaid(item.id);
+      await markPaidMutation.mutateAsync({ id: item.id, month: item.reference_month });
       queryClient.setQueryData<OverdueBillPaymentsResponse>(
         queryKeys.overduePayments,
         (current) => {
@@ -59,15 +62,7 @@ export default function OverdueBillsPage() {
           };
         },
       );
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.overduePayments }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.monthlyPayments.month(item.reference_month),
-        }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.notifications }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.overduePayments });
       setSuccessMessage(`${item.bill_name} foi marcada como paga.`);
     } catch (error) {
       setActionError(
@@ -99,11 +94,7 @@ export default function OverdueBillsPage() {
         </div>
       </section>
 
-      {successMessage ? (
-        <div className="rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {successMessage}
-        </div>
-      ) : null}
+      <SuccessMessage message={successMessage} />
       {actionError || overdueQuery.error ? (
         <ErrorMessage
           message={

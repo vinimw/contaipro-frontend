@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatCurrencyBRL } from "@/lib/currency";
 import { formatDateBR } from "@/lib/dates";
+import { paymentStatus } from "@/lib/payment-status";
 import type { BillPayment } from "@/types/bill-payment";
 
 type BillPaymentListProps = {
@@ -14,12 +15,6 @@ type BillPaymentListProps = {
   deletingId?: string | null;
   onToggleStatus: (item: BillPayment) => void;
   onDelete?: (item: BillPayment) => void;
-};
-
-const statusConfig = {
-  paid: { label: "Pago", tone: "paid" as const },
-  pending: { label: "Pendente", tone: "pending" as const },
-  overdue: { label: "Atrasado", tone: "overdue" as const },
 };
 
 export function BillPaymentList({
@@ -32,8 +27,8 @@ export function BillPaymentList({
   if (!items.length) {
     return (
       <EmptyState
-        title="Nenhuma conta para este mes"
-        description="Quando suas contas aparecerem aqui, voce podera marcar pagamentos com um toque."
+        title="Nenhuma conta para este mês"
+        description="Quando suas contas aparecerem aqui, você poderá marcar pagamentos com um toque."
       />
     );
   }
@@ -41,7 +36,7 @@ export function BillPaymentList({
   return (
     <div className="space-y-2.5">
       {items.map((item) => {
-        const status = statusConfig[item.status];
+        const status = paymentStatus[item.status];
 
         return (
           <Card

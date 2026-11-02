@@ -10,13 +10,13 @@ import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
 
 const titles: Record<string, string> = {
-  "/app/dashboard": "Resumo do mes",
+  "/app/dashboard": "Resumo do mês",
   "/app/monthly": "Mês a mês",
   "/app/overdue": "Contas atrasadas",
   "/app/bills": "Contas fixas",
   "/app/income": "Renda e perfil",
-  "/app/expenses": "Gastos rapidos",
-  "/app/settings": "Configuracoes",
+  "/app/expenses": "Gastos rápidos",
+  "/app/settings": "Configurações",
 };
 
 export function TopBar() {

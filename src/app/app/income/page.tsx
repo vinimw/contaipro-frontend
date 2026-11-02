@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Input } from "@/components/ui/Input";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { SuccessMessage } from "@/components/ui/SuccessMessage";
 import { formatCurrencyBRL } from "@/lib/currency";
 import {
   addMonth,
@@ -35,6 +36,8 @@ import type {
   FinancialProfileOverview,
   FinancialProfilePeriod,
 } from "@/types/financial-profile";
+import { useIncomeMutations } from "@/hooks/useIncomeMutations";
+import { useFinanceInvalidation } from "@/hooks/useFinanceInvalidation";
 
 const profileSchema = z.object({
   monthly_income_amount: z.coerce.number().min(0, "Informe um valor valido."),
@@ -61,6 +64,8 @@ function IncomePageContent() {
   const searchParams = useSearchParams();
   const month = getValidMonth(searchParams.get("month")) ?? currentMonth;
   const queryClient = useQueryClient();
+  const incomeMutations = useIncomeMutations();
+  const { invalidateMonth } = useFinanceInvalidation();
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [editingProfilePeriod, setEditingProfilePeriod] =
@@ -138,12 +143,9 @@ function IncomePageContent() {
 
     try {
       const profile = editingProfilePeriod
-        ? await financialProfileService.updatePeriod(editingProfilePeriod.id, values)
-        : await financialProfileService.update(values);
+        ? await incomeMutations.updateProfilePeriod.mutateAsync({ id: editingProfilePeriod.id, payload: values })
+        : await incomeMutations.updateProfile.mutateAsync(values);
       setProfileOverview(profile);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
       setEditingProfilePeriod(null);
       profileForm.reset({
         monthly_income_amount:
@@ -175,13 +177,8 @@ function IncomePageContent() {
     setIsDeletingProfilePeriod(true);
 
     try {
-      const profile = await financialProfileService.removePeriod(
-        profilePeriodToDelete.id,
-      );
+      const profile = await incomeMutations.removeProfilePeriod.mutateAsync(profilePeriodToDelete.id);
       setProfileOverview(profile);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
 
       if (editingProfilePeriod?.id === profilePeriodToDelete.id) {
         setEditingProfilePeriod(null);
@@ -215,18 +212,18 @@ function IncomePageContent() {
       const incomeMonth = values.income_date?.slice(0, 7) ?? month;
 
       if (editingIncome) {
-        await extraIncomesService.update(editingIncome.id, {
+        await incomeMutations.updateExtra.mutateAsync({ id: editingIncome.id, month: incomeMonth, payload: {
           name: values.name,
           amount: values.amount,
           income_date: values.income_date || null,
-        });
+        } });
         setSuccessMessage("Renda extra atualizada.");
       } else {
-        await extraIncomesService.create({
+        await incomeMutations.createExtra.mutateAsync({ month: incomeMonth, payload: {
           name: values.name,
           amount: values.amount,
           income_date: values.income_date || null,
-        });
+        } });
         setSuccessMessage("Renda extra criada.");
       }
 
@@ -237,16 +234,7 @@ function IncomePageContent() {
       });
       setEditingIncome(null);
       await incomesQuery.refetch();
-      for (const affectedMonth of new Set([previousMonth, incomeMonth])) {
-        if (affectedMonth) {
-          if (affectedMonth !== month) {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.extraIncomes.month(affectedMonth) });
-          }
-          void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(affectedMonth) });
-        }
-      }
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
+      if (previousMonth && previousMonth !== incomeMonth) await invalidateMonth(previousMonth, { incomes: true, notifications: true });
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -299,7 +287,8 @@ function IncomePageContent() {
     setIsDeleting(true);
 
     try {
-      await extraIncomesService.remove(incomeToDelete.id);
+      const incomeMonth = incomeToDelete.income_date?.slice(0, 7) ?? month;
+      await incomeMutations.removeExtra.mutateAsync({ id: incomeToDelete.id, month: incomeMonth });
 
       if (editingIncome?.id === incomeToDelete.id) {
         setEditingIncome(null);
@@ -313,13 +302,6 @@ function IncomePageContent() {
       setIncomeToDelete(null);
       setSuccessMessage("Renda extra removida.");
       await incomesQuery.refetch();
-      const incomeMonth = incomeToDelete.income_date?.slice(0, 7) ?? month;
-      if (incomeMonth !== month) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.extraIncomes.month(incomeMonth) });
-      }
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(incomeMonth) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Nao foi possivel remover a renda extra.");
     } finally {
@@ -365,11 +347,7 @@ function IncomePageContent() {
         </div>
       </Card>
 
-      {successMessage ? (
-        <div className="rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {successMessage}
-        </div>
-      ) : null}
+      <SuccessMessage message={successMessage} />
       {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
       {preferencesQuery.error ? (
         <ErrorMessage message={preferencesQuery.error.message} />

@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Input } from "@/components/ui/Input";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { SuccessMessage } from "@/components/ui/SuccessMessage";
 import { useAuth } from "@/hooks/useAuth";
 import { userService } from "@/services/user.service";
 import { queryKeys } from "@/lib/query-keys";
@@ -108,23 +109,19 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <Card>
         <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[var(--color-primary)]">
-          Configuracoes
+          Configurações
         </p>
         <h1 className="mt-3 font-display text-3xl font-semibold text-slate-950">
           Ajuste seus dados de acesso
         </h1>
         <p className="mt-2 text-sm text-slate-500">
-          Atualize seu nome e troque a senha sem expor informacoes sensiveis no frontend.
+          Atualize seu nome e troque a senha sem expor informações sensíveis no frontend.
         </p>
       </Card>
 
-      {successMessage ? (
-        <div className="rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {successMessage}
-        </div>
-      ) : null}
+      <SuccessMessage message={successMessage} />
       {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
-      {userQuery.error ? <ErrorMessage message={userQuery.error.message || "Erro ao carregar configuracoes."} /> : null}
+      {userQuery.error ? <ErrorMessage message={userQuery.error.message || "Erro ao carregar configurações."} /> : null}
       {userQuery.isPending ? <LoadingState label="Carregando configuracoes..." /> : null}
 
       {!userQuery.isPending ? (
