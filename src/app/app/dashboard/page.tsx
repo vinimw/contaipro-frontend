@@ -16,7 +16,6 @@ import {
   Landmark,
   ListChecks,
   Plus,
-  SlidersHorizontal,
   TriangleAlert,
   WalletCards,
   Zap,
@@ -251,7 +250,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
                   Resumo financeiro
                 </p>
-                <Link className="text-[11px] font-semibold text-[var(--color-primary-strong)]" href="/app/income">
+                <Link className="text-[11px] font-semibold text-[var(--color-primary-strong)]" href="/app/monthly">
                   Ver todos
                 </Link>
               </div>
@@ -336,9 +335,6 @@ export default function DashboardPage() {
                     Marque rapidamente as contas pagas e destaque o que ficou atrasado.
                   </p>
                 </div>
-                <button className="inline-flex size-8 items-center justify-center rounded-[10px] text-slate-500 md:hidden">
-                  <SlidersHorizontal className="size-5" />
-                </button>
               </div>
 
               {isDesktop ? (
@@ -399,7 +395,12 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-extrabold text-slate-900">{formatCurrencyBRL(item.amount)}</p>
-                        <p className="mt-1 text-[8px] font-extrabold uppercase text-[#d92027]">{statusLabel(item.status)}</p>
+                        <Badge
+                          className="mt-1 px-2 py-0.5 text-[8px] uppercase"
+                          tone={statusTone(item.status)}
+                        >
+                          {statusLabel(item.status)}
+                        </Badge>
                       </div>
                     </div>
                   ))}
