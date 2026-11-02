@@ -179,33 +179,42 @@ export default function IncomePage() {
   }
 
   async function submitExtraIncome(values: ExtraIncomeFormValues) {
+    setErrorMessage("");
     setSuccessMessage("");
 
-    if (editingIncome) {
-      await extraIncomesService.update(editingIncome.id, {
-        name: values.name,
-        amount: values.amount,
-        income_date: values.income_date || null,
-      });
-      setSuccessMessage("Renda extra atualizada.");
-    } else {
-      await extraIncomesService.create({
-        name: values.name,
-        amount: values.amount,
-        income_date: values.income_date || null,
-      });
-      setSuccessMessage("Renda extra criada.");
-    }
+    try {
+      if (editingIncome) {
+        await extraIncomesService.update(editingIncome.id, {
+          name: values.name,
+          amount: values.amount,
+          income_date: values.income_date || null,
+        });
+        setSuccessMessage("Renda extra atualizada.");
+      } else {
+        await extraIncomesService.create({
+          name: values.name,
+          amount: values.amount,
+          income_date: values.income_date || null,
+        });
+        setSuccessMessage("Renda extra criada.");
+      }
 
-    extraIncomeForm.reset({
-      name: "",
-      amount: 0,
-      income_date: "",
-    });
-    setEditingIncome(null);
-    await incomesQuery.refetch();
-    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
+      extraIncomeForm.reset({
+        name: "",
+        amount: 0,
+        income_date: "",
+      });
+      setEditingIncome(null);
+      await incomesQuery.refetch();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel salvar a renda extra.",
+      );
+    }
   }
 
   async function toggleIncomeReminder() {
