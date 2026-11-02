@@ -40,29 +40,38 @@ export default function ExpensesPage() {
   };
 
   async function handleSubmit(values: QuickExpenseFormValues) {
+    setErrorMessage("");
     setSuccessMessage("");
 
-    if (editingExpense) {
-      await quickExpensesService.update(editingExpense.id, {
-        name: values.name,
-        amount: values.amount,
-        expense_date: values.expense_date || null,
-      });
-      setSuccessMessage("Gasto rapido atualizado.");
-    } else {
-      await quickExpensesService.create({
-        name: values.name,
-        amount: values.amount,
-        expense_date: values.expense_date || null,
-      });
-      setSuccessMessage("Gasto rapido criado.");
-    }
+    try {
+      if (editingExpense) {
+        await quickExpensesService.update(editingExpense.id, {
+          name: values.name,
+          amount: values.amount,
+          expense_date: values.expense_date || null,
+        });
+        setSuccessMessage("Gasto rapido atualizado.");
+      } else {
+        await quickExpensesService.create({
+          name: values.name,
+          amount: values.amount,
+          expense_date: values.expense_date || null,
+        });
+        setSuccessMessage("Gasto rapido criado.");
+      }
 
-    setEditingExpense(null);
-    await loadExpenses();
-    void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(currentMonth) });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(currentMonth) });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
+      setEditingExpense(null);
+      await loadExpenses();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.monthlyPayments.month(currentMonth) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.month(currentMonth) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.chart() });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel salvar o gasto.",
+      );
+    }
   }
 
   async function handleDelete() {

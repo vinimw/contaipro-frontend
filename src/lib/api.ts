@@ -61,9 +61,13 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
-      clearSession();
+      const hadActiveSession = Boolean(getAccessToken());
+      const isAuthRoute =
+        typeof window !== "undefined" &&
+        window.location.pathname.startsWith("/auth/");
 
-      if (typeof window !== "undefined") {
+      if (hadActiveSession && !isAuthRoute) {
+        clearSession();
         window.location.href = "/auth/login";
       }
     }

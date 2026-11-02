@@ -36,6 +36,7 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 
 export default function SettingsPage() {
   const { setUser, user: authenticatedUser } = useAuth();
+  const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -70,15 +71,37 @@ export default function SettingsPage() {
   }, [profileForm, userQuery.data]);
 
   async function submitProfile(values: ProfileFormValues) {
-    const user = await userService.updateProfile({ name: values.name });
-    setUser(user);
-    setSuccessMessage("Nome atualizado com sucesso.");
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const user = await userService.updateProfile({ name: values.name });
+      setUser(user);
+      setSuccessMessage("Nome atualizado com sucesso.");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel atualizar o perfil.",
+      );
+    }
   }
 
   async function submitPassword(values: PasswordFormValues) {
-    await userService.updatePassword(values);
-    passwordForm.reset();
-    setSuccessMessage("Senha atualizada com sucesso.");
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      await userService.updatePassword(values);
+      passwordForm.reset();
+      setSuccessMessage("Senha atualizada com sucesso.");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel atualizar a senha.",
+      );
+    }
   }
 
   return (
@@ -100,6 +123,7 @@ export default function SettingsPage() {
           {successMessage}
         </div>
       ) : null}
+      {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
       {userQuery.error ? <ErrorMessage message={userQuery.error.message || "Erro ao carregar configuracoes."} /> : null}
       {userQuery.isPending ? <LoadingState label="Carregando configuracoes..." /> : null}
 
