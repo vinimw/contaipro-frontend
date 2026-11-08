@@ -225,6 +225,18 @@ export default function DashboardPage() {
               </div>
               <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2">
                 <div className="min-w-[152px] rounded-[10px] border border-slate-100 bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
+                  <p className="text-[10px] font-medium uppercase text-slate-500">Saldo previsto</p>
+                  <p className="mt-10 text-base font-extrabold text-slate-900">
+                    {formatCurrencyBRL(data.summary.projected_balance)}
+                  </p>
+                </div>
+                <div className="min-w-[152px] rounded-[10px] border border-slate-100 bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
+                  <p className="text-[10px] font-medium uppercase text-slate-500">Gastos totais</p>
+                  <p className="mt-10 text-base font-extrabold text-slate-900">
+                    {formatCurrencyBRL(data.summary.total_bills_amount + data.summary.quick_expenses_total)}
+                  </p>
+                </div>
+                <div className="min-w-[152px] rounded-[10px] border border-slate-100 bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
                   <div className="flex items-start justify-between">
                     <p className="text-[10px] font-medium uppercase text-slate-500">Renda mensal</p>
                     <span className="inline-flex size-6 items-center justify-center rounded-[10px] bg-[var(--color-primary-soft)] text-[#071a3d]">
@@ -233,18 +245,6 @@ export default function DashboardPage() {
                   </div>
                   <p className="mt-7 text-base font-extrabold text-slate-900">
                     {formatCurrencyBRL(data.summary.monthly_income_amount)}
-                  </p>
-                </div>
-                <div className="min-w-[152px] rounded-[10px] border border-slate-100 bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
-                  <p className="text-[10px] font-medium uppercase text-slate-500">Saldo previsto</p>
-                  <p className="mt-10 text-base font-extrabold text-slate-900">
-                    {formatCurrencyBRL(data.summary.projected_balance)}
-                  </p>
-                </div>
-                <div className="min-w-[152px] rounded-[10px] border border-slate-100 bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
-                  <p className="text-[10px] font-medium uppercase text-slate-500">Gastos rapidos</p>
-                  <p className="mt-10 text-base font-extrabold text-slate-900">
-                    {formatCurrencyBRL(data.summary.quick_expenses_total)}
                   </p>
                 </div>
               </div>
