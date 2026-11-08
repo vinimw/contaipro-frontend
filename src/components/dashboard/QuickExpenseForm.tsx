@@ -43,7 +43,12 @@ export function QuickExpenseForm({
   });
 
   async function submit(values: QuickExpenseFormValues) {
-    await onSubmit(values);
+    try {
+      await onSubmit(values);
+    } catch {
+      // The caller shows the error; keep the typed values so nothing is lost.
+      return;
+    }
 
     if (!defaultValues) {
       reset({

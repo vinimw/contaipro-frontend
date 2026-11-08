@@ -10,7 +10,9 @@ import { LazyQuickExpenseForm } from "@/components/dashboard/LazyQuickExpenseFor
 import type { QuickExpenseFormValues } from "@/components/dashboard/QuickExpenseForm";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { QuickExpenseContext } from "@/hooks/useQuickExpense";
+import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Modal } from "@/components/ui/Modal";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { cn } from "@/lib/utils";
 import { getCurrentMonth } from "@/lib/dates";
 import { appNavigation } from "@/lib/navigation";
@@ -26,6 +28,8 @@ export function AppShell({
   const { create: createExpense } = useExpenseMutations();
   const [quickExpenseOpen, setQuickExpenseOpen] = useState(false);
   const [quickExpenseError, setQuickExpenseError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isDesktop = useIsDesktop();
 
   const openQuickExpense = useCallback(() => {
     setQuickExpenseError("");
@@ -35,6 +39,7 @@ export function AppShell({
 
   async function handleQuickExpenseSubmit(values: QuickExpenseFormValues) {
     setQuickExpenseError("");
+    setIsSubmitting(true);
 
     try {
       const month = values.expense_date?.slice(0, 7) || getCurrentMonth();
@@ -44,8 +49,18 @@ export function AppShell({
       setQuickExpenseError(
         error instanceof Error ? error.message : "Não foi possível criar o gasto rápido.",
       );
+      throw error;
+    } finally {
+      setIsSubmitting(false);
     }
   }
+
+  const quickExpenseContent = (
+    <div className="space-y-4">
+      {quickExpenseError ? <ErrorMessage message={quickExpenseError} /> : null}
+      <LazyQuickExpenseForm onSubmit={handleQuickExpenseSubmit} />
+    </div>
+  );
 
   return (
     <QuickExpenseContext.Provider value={quickExpenseContext}>
@@ -81,16 +96,24 @@ export function AppShell({
           <main className="min-w-0 pt-6 md:pt-10">{children}</main>
         </div>
         <BottomNavigation onQuickExpenseClick={openQuickExpense} />
-        <Modal
-          open={quickExpenseOpen}
-          title="Novo gasto rápido"
-          onClose={() => setQuickExpenseOpen(false)}
-        >
-          <div className="space-y-4">
-            {quickExpenseError ? <ErrorMessage message={quickExpenseError} /> : null}
-            <LazyQuickExpenseForm onSubmit={handleQuickExpenseSubmit} />
-          </div>
-        </Modal>
+        {isDesktop ? (
+          <Modal
+            open={quickExpenseOpen}
+            title="Novo gasto rápido"
+            onClose={() => setQuickExpenseOpen(false)}
+          >
+            {quickExpenseContent}
+          </Modal>
+        ) : (
+          <BottomSheet
+            dismissible={!isSubmitting}
+            open={quickExpenseOpen}
+            title="Novo gasto rápido"
+            onClose={() => setQuickExpenseOpen(false)}
+          >
+            {quickExpenseContent}
+          </BottomSheet>
+        )}
       </div>
     </QuickExpenseContext.Provider>
   );
