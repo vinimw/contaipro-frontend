@@ -32,6 +32,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { SuccessMessage } from "@/components/ui/SuccessMessage";
 import { useDashboard } from "@/hooks/useDashboard";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { useQuickExpense } from "@/hooks/useQuickExpense";
 import { formatCurrencyBRL } from "@/lib/currency";
 import {
@@ -68,24 +69,6 @@ const iconTone = {
   red: "bg-[#fff1f1] text-[#d92027]",
   cyan: "bg-[#d9efff] text-[#087694]",
 };
-
-const desktopQuery = "(min-width: 768px)";
-
-function subscribeToDesktop(onChange: () => void) {
-  const mediaQuery = window.matchMedia(desktopQuery);
-  mediaQuery.addEventListener("change", onChange);
-
-  return () => mediaQuery.removeEventListener("change", onChange);
-}
-
-// Reads the breakpoint on the first client render, so the chart mounts once with the right size.
-function useIsDesktop() {
-  return useSyncExternalStore(
-    subscribeToDesktop,
-    () => window.matchMedia(desktopQuery).matches,
-    () => false,
-  );
-}
 
 export default function DashboardPage() {
   const [month, setMonth] = useState(getCurrentMonth());
