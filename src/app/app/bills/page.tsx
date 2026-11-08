@@ -5,6 +5,9 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
+import { BillCreateForm } from "@/components/forms/BillCreateForm";
+import { BillEditForm } from "@/components/forms/BillEditForm";
+import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
 import { buttonStyles } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -13,6 +16,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { SuccessMessage } from "@/components/ui/SuccessMessage";
+import { cn } from "@/lib/utils";
 import { formatCurrencyBRL } from "@/lib/currency";
 import { formatDateBR } from "@/lib/dates";
 import { queryKeys } from "@/lib/query-keys";
@@ -38,6 +42,8 @@ export default function BillsPage() {
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [sheet, setSheet] = useState<{ mode: "create" } | { mode: "edit"; id: string } | null>(null);
+  const [isSheetBusy, setIsSheetBusy] = useState(false);
 
   const billsQuery = useQuery({ queryKey: queryKeys.bills.all, queryFn: billsService.list });
   const { remove: deleteMutation } = useBillMutations();
@@ -78,10 +84,14 @@ export default function BillsPage() {
             Gerencie recorrencia, vencimento e os principais detalhes das despesas fixas.
           </p>
         </div>
-        <Link className={buttonStyles({})} href="/app/bills/new">
+        <Link className={cn(buttonStyles({}), "hidden md:inline-flex")} href="/app/bills/new">
           <Plus className="mr-2 size-4" />
           Nova conta
         </Link>
+        <Button className="md:hidden" onClick={() => setSheet({ mode: "create" })}>
+          <Plus className="mr-2 size-4" />
+          Nova conta
+        </Button>
       </Card>
 
       <SuccessMessage message={successMessage} />
@@ -116,12 +126,20 @@ export default function BillsPage() {
                 </div>
                 <div className="flex gap-2">
                   <Link
-                    className={buttonStyles({ variant: "secondary" })}
+                    className={cn(buttonStyles({ variant: "secondary" }), "hidden md:inline-flex")}
                     href={`/app/bills/${item.id}/edit`}
                   >
                     <Pencil className="mr-2 size-4" />
                     Editar
                   </Link>
+                  <Button
+                    className="md:hidden"
+                    variant="secondary"
+                    onClick={() => setSheet({ mode: "edit", id: item.id })}
+                  >
+                    <Pencil className="mr-2 size-4" />
+                    Editar
+                  </Button>
                   <Button variant="danger" onClick={() => setBillToDelete(item)}>
                     <Trash2 className="mr-2 size-4" />
                     Deletar
@@ -132,6 +150,32 @@ export default function BillsPage() {
           ))}
         </div>
       ) : null}
+      <BottomSheet
+        dismissible={!isSheetBusy}
+        open={sheet !== null}
+        title={sheet?.mode === "edit" ? "Editar conta" : "Nova conta"}
+        onClose={() => setSheet(null)}
+      >
+        {sheet?.mode === "create" ? (
+          <BillCreateForm
+            onCreated={() => {
+              setSheet(null);
+              setSuccessMessage("Conta criada com sucesso.");
+            }}
+            onPendingChange={setIsSheetBusy}
+          />
+        ) : null}
+        {sheet?.mode === "edit" ? (
+          <BillEditForm
+            billId={sheet.id}
+            onPendingChange={setIsSheetBusy}
+            onSaved={() => {
+              setSheet(null);
+              setSuccessMessage("Conta atualizada com sucesso.");
+            }}
+          />
+        ) : null}
+      </BottomSheet>
       <ConfirmDialog
         description={
           billToDelete

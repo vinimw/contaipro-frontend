@@ -1,30 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { BillForm } from "@/components/forms/BillForm";
-import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { BillCreateForm } from "@/components/forms/BillCreateForm";
 import { buttonStyles } from "@/components/ui/Button";
-import { useBillMutations } from "@/hooks/useBillMutations";
-import type { BillPayload } from "@/types/bill";
 
 export default function NewBillPage() {
   const router = useRouter();
-  const { create } = useBillMutations();
-  const [errorMessage, setErrorMessage] = useState("");
-
-  async function handleSubmit(payload: BillPayload) {
-    setErrorMessage("");
-
-    try {
-      await create.mutateAsync(payload);
-      router.replace("/app/bills");
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Nao foi possivel criar a conta.");
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -41,8 +24,7 @@ export default function NewBillPage() {
           Voltar
         </Link>
       </div>
-      {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
-      <BillForm submitLabel="Criar conta" onSubmit={handleSubmit} />
+      <BillCreateForm onCreated={() => router.replace("/app/bills")} />
     </div>
   );
 }
