@@ -267,7 +267,7 @@ function MonthlyPageContent() {
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-[auto_minmax(180px,220px)_auto] sm:gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[auto_minmax(180px,220px)_auto] sm:gap-3">
             <Button
               className="rounded-[10px] bg-slate-100 px-2 text-xs text-slate-700 shadow-none hover:bg-slate-200 sm:px-4 sm:text-sm md:min-h-10 md:px-3"
               onClick={() => updateMonth(subtractMonth(month))}
@@ -277,7 +277,7 @@ function MonthlyPageContent() {
             </Button>
             <Input
               aria-label="Selecionar mês"
-              className="min-w-0 px-2 text-center text-xs sm:px-3 sm:text-sm md:min-h-10 md:rounded-[10px]"
+              className="order-first col-span-2 min-w-0 max-w-full px-2 text-center text-sm sm:order-none sm:col-span-1 sm:px-3 md:min-h-10 md:rounded-[10px]"
               type="month"
               value={month}
               onChange={(event) => updateMonth(event.target.value)}
@@ -329,6 +329,11 @@ function MonthlyPageContent() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-extrabold text-slate-900 md:text-xl">Gastos do mês</h2>
+            {!isLoading && !paymentsQuery.error ? (
+              <p className="mt-1 text-sm font-semibold text-slate-600 md:hidden">
+                Total do mês: {formatCurrencyBRL(totals.total)}
+              </p>
+            ) : null}
           </div>
           <span className="hidden items-center gap-2 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-1.5 text-xs font-semibold text-[#071a3d] md:inline-flex">
             <CalendarDays className="size-3.5" />
