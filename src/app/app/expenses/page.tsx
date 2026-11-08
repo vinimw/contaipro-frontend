@@ -3,12 +3,13 @@
 import { Suspense, useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
   QuickExpenseForm,
   type QuickExpenseFormValues,
 } from "@/components/dashboard/QuickExpenseForm";
+import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -29,6 +30,7 @@ import {
 import { queryKeys } from "@/lib/query-keys";
 import { quickExpensesService } from "@/services/quick-expenses.service";
 import { useExpenseMutations } from "@/hooks/useExpenseMutations";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { useFinanceInvalidation } from "@/hooks/useFinanceInvalidation";
 import type { QuickExpense } from "@/types/quick-expense";
 
@@ -40,6 +42,9 @@ function ExpensesPageContent() {
   const expenseMutations = useExpenseMutations();
   const { invalidateMonth } = useFinanceInvalidation();
   const [editingExpense, setEditingExpense] = useState<QuickExpense | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const isDesktop = useIsDesktop();
   const [expenseToDelete, setExpenseToDelete] = useState<QuickExpense | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -72,6 +77,7 @@ function ExpensesPageContent() {
   async function handleSubmit(values: QuickExpenseFormValues) {
     setErrorMessage("");
     setSuccessMessage("");
+    setIsSaving(true);
 
     try {
       const previousMonth = editingExpense
@@ -96,6 +102,7 @@ function ExpensesPageContent() {
       }
 
       setEditingExpense(null);
+      setSheetOpen(false);
       await loadExpenses();
       if (previousMonth && previousMonth !== expenseMonth) await invalidateMonth(previousMonth, { expenses: true });
     } catch (error) {
@@ -104,6 +111,9 @@ function ExpensesPageContent() {
           ? error.message
           : "Não foi possível salvar o gasto.",
       );
+      throw error;
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -170,40 +180,56 @@ function ExpensesPageContent() {
       </Card>
 
       <SuccessMessage message={successMessage} />
-      {errorMessage || expensesQuery.error ? (
-        <ErrorMessage message={errorMessage || expensesQuery.error?.message || "Erro ao carregar gastos."} />
+      {(errorMessage && !sheetOpen) || expensesQuery.error ? (
+        <ErrorMessage
+          message={(!sheetOpen && errorMessage) || expensesQuery.error?.message || "Erro ao carregar gastos."}
+        />
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-        <Card>
-          <h2 className="font-display text-xl font-semibold text-slate-950">
-            {editingExpense ? "Editar gasto rápido" : "Novo gasto rápido"}
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Use um formulário curto para registrar o que saiu do caixa neste mês.
-          </p>
-          <div className="mt-5">
-            <QuickExpenseForm
-              key={editingExpense?.id ?? "create-expense"}
-              defaultValues={
-                editingExpense
-                  ? {
-                      name: editingExpense.name,
-                      amount: editingExpense.amount,
-                      expense_date: editingExpense.expense_date?.slice(0, 10) ?? "",
-                    }
-                  : undefined
-              }
-              submitLabel={editingExpense ? "Salvar alterações" : "Adicionar gasto"}
-              onSubmit={handleSubmit}
-            />
-            {editingExpense ? (
-              <Button className="mt-3 w-full" variant="ghost" onClick={() => setEditingExpense(null)}>
-                Cancelar edição
-              </Button>
-            ) : null}
-          </div>
-        </Card>
+        {isDesktop ? (
+          <Card>
+            <h2 className="font-display text-xl font-semibold text-slate-950">
+              {editingExpense ? "Editar gasto rápido" : "Novo gasto rápido"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Use um formulário curto para registrar o que saiu do caixa neste mês.
+            </p>
+            <div className="mt-5">
+              <QuickExpenseForm
+                key={editingExpense?.id ?? "create-expense"}
+                defaultValues={
+                  editingExpense
+                    ? {
+                        name: editingExpense.name,
+                        amount: editingExpense.amount,
+                        expense_date: editingExpense.expense_date?.slice(0, 10) ?? "",
+                      }
+                    : undefined
+                }
+                submitLabel={editingExpense ? "Salvar alterações" : "Adicionar gasto"}
+                onSubmit={handleSubmit}
+              />
+              {editingExpense ? (
+                <Button className="mt-3 w-full" variant="ghost" onClick={() => setEditingExpense(null)}>
+                  Cancelar edição
+                </Button>
+              ) : null}
+            </div>
+          </Card>
+        ) : (
+          <Button
+            className="w-full"
+            onClick={() => {
+              setErrorMessage("");
+              setEditingExpense(null);
+              setSheetOpen(true);
+            }}
+          >
+            <Plus className="mr-2 size-4" />
+            Adicionar gasto rápido
+          </Button>
+        )}
 
         <div className="space-y-4">
           {isLoading ? <LoadingState label="Carregando gastos..." /> : null}
@@ -230,7 +256,9 @@ function ExpensesPageContent() {
                       <Button
                         variant="secondary"
                         onClick={() => {
+                          setErrorMessage("");
                           setEditingExpense(item);
+                          setSheetOpen(true);
                         }}
                       >
                         <Pencil className="mr-2 size-4" />
@@ -247,6 +275,33 @@ function ExpensesPageContent() {
             : null}
         </div>
       </div>
+      <BottomSheet
+        dismissible={!isSaving}
+        open={sheetOpen && !isDesktop}
+        title={editingExpense ? "Editar gasto rápido" : "Novo gasto rápido"}
+        onClose={() => {
+          setSheetOpen(false);
+          setEditingExpense(null);
+        }}
+      >
+        <div className="space-y-4">
+          {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
+          <QuickExpenseForm
+            key={editingExpense?.id ?? "create-expense-sheet"}
+            defaultValues={
+              editingExpense
+                ? {
+                    name: editingExpense.name,
+                    amount: editingExpense.amount,
+                    expense_date: editingExpense.expense_date?.slice(0, 10) ?? "",
+                  }
+                : undefined
+            }
+            submitLabel={editingExpense ? "Salvar alterações" : "Adicionar gasto"}
+            onSubmit={handleSubmit}
+          />
+        </div>
+      </BottomSheet>
       <ConfirmDialog
         description={
           expenseToDelete
