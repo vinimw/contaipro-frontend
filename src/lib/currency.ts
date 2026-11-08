@@ -1,9 +1,17 @@
+import { areValuesHidden } from "@/lib/values-visibility";
+
 const brlFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
 
+export const hiddenValueMask = "***";
+
 export function formatCurrencyBRL(value: number | null | undefined) {
+  if (areValuesHidden()) {
+    return hiddenValueMask;
+  }
+
   return brlFormatter.format(value ?? 0);
 }
 
