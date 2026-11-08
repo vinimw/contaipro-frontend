@@ -1,47 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { BillForm } from "@/components/forms/BillForm";
+import { BillEditForm } from "@/components/forms/BillEditForm";
 import { buttonStyles } from "@/components/ui/Button";
-import { ErrorMessage } from "@/components/ui/ErrorMessage";
-import { LoadingState } from "@/components/ui/LoadingState";
-import { billsService } from "@/services/bills.service";
-import { useBillMutations } from "@/hooks/useBillMutations";
-import type { Bill, BillPayload } from "@/types/bill";
-import { queryKeys } from "@/lib/query-keys";
 
 export default function EditBillPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const params = useParams<{ id: string }>();
-  const [errorMessage, setErrorMessage] = useState("");
-  const { update } = useBillMutations();
-  const billQuery = useQuery({
-    queryKey: queryKeys.bills.detail(params.id),
-    queryFn: () => billsService.getById(params.id),
-    initialData: () => queryClient.getQueryData<Bill[]>(queryKeys.bills.all)?.find((item) => item.id === params.id),
-  });
-
-  async function handleSubmit(payload: BillPayload) {
-    setErrorMessage("");
-
-    try {
-      const updatedBill = await update.mutateAsync({ id: params.id, payload });
-      queryClient.setQueryData(queryKeys.bills.detail(params.id), updatedBill);
-      queryClient.setQueryData<Bill[]>(queryKeys.bills.all, (current = []) =>
-        current.map((item) => (item.id === params.id ? updatedBill : item)),
-      );
-      router.replace("/app/bills");
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Nao foi possivel salvar a conta.",
-      );
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -58,10 +25,7 @@ export default function EditBillPage() {
           Voltar
         </Link>
       </div>
-
-      {errorMessage || billQuery.error ? <ErrorMessage message={errorMessage || billQuery.error?.message || "Erro ao carregar conta."} /> : null}
-      {billQuery.isPending ? <LoadingState label="Carregando conta..." /> : null}
-      {billQuery.data ? <BillForm initialValues={billQuery.data} submitLabel="Salvar alteracoes" onSubmit={handleSubmit} /> : null}
+      <BillEditForm billId={params.id} onSaved={() => router.replace("/app/bills")} />
     </div>
   );
 }
