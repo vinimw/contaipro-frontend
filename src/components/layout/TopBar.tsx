@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 
 import { BrandLogo } from "@/components/layout/BrandLogo";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { ValuesVisibilityToggle } from "@/components/layout/ValuesVisibilityToggle";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -33,6 +34,7 @@ export function TopBar() {
       <div className="flex items-center justify-between gap-4 md:hidden">
         <BrandLogo className="w-32" />
         <div className="flex items-center gap-2">
+          <ValuesVisibilityToggle compact />
           <NotificationBell compact />
           <Button
             aria-label="Sair da conta"
@@ -57,6 +59,7 @@ export function TopBar() {
           <div className="rounded-[10px] bg-slate-100 px-5 py-3 text-base text-slate-700">
             {user?.name ? `Ola, ${user.name.split(" ")[0]}` : "Seu painel financeiro"}
           </div>
+          <ValuesVisibilityToggle />
           <NotificationBell />
           <Button className="min-h-0 px-0 py-0 text-base text-slate-600 hover:bg-transparent" variant="ghost" onClick={logout}>
             <LogOut className="mr-2 size-5" />

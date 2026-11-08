@@ -13,6 +13,7 @@ import { QuickExpenseContext } from "@/hooks/useQuickExpense";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Modal } from "@/components/ui/Modal";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
+import { useValuesVisibility } from "@/hooks/useValuesVisibility";
 import { cn } from "@/lib/utils";
 import { getCurrentMonth } from "@/lib/dates";
 import { appNavigation } from "@/lib/navigation";
@@ -30,6 +31,7 @@ export function AppShell({
   const [quickExpenseError, setQuickExpenseError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isDesktop = useIsDesktop();
+  const { hidden: valuesHidden } = useValuesVisibility();
 
   const openQuickExpense = useCallback(() => {
     setQuickExpenseError("");
@@ -93,7 +95,10 @@ export function AppShell({
         </aside>
         <div className="min-w-0 px-5 py-4 md:px-8 md:py-4">
           <TopBar />
-          <main className="min-w-0 pt-6 md:pt-10">{children}</main>
+          {/* Remounting on toggle re-renders every formatted value, since they read a shared store. */}
+          <main key={valuesHidden ? "values-hidden" : "values-visible"} className="min-w-0 pt-6 md:pt-10">
+            {children}
+          </main>
         </div>
         <BottomNavigation onQuickExpenseClick={openQuickExpense} />
         {isDesktop ? (
