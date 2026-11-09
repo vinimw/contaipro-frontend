@@ -26,4 +26,14 @@ export const queryKeys = {
     month: (month: string) => ["extra-incomes", month] as const,
   },
   financialProfile: ["financial-profile"] as const,
+  investments: {
+    all: ["investments"] as const,
+    categories: ["investments", "categories"] as const,
+    dataStatus: ["investments", "data-status"] as const,
+    // Keys carry the selection, base date and dataset version so one selection never reuses another's cache.
+    assets: (category: string, page: number, datasetVersion: string | null) =>
+      ["investments", "assets", category, page, datasetVersion] as const,
+    ranking: (category: string, period: string, asOf: string, datasetVersion: string | null) =>
+      ["investments", "ranking", category, period, asOf, datasetVersion] as const,
+  },
 };
