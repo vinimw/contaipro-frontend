@@ -1,10 +1,17 @@
-export type ContributionType = "single" | "monthly";
-export type InvestmentStep = "entry" | "review";
+import type { ContributionType, InvestmentCategoryId, InvestmentSelection, RankingPeriod } from "@/types/investment";
+
+export type { ContributionType };
+export type InvestmentStep = "entry" | "explore" | "result";
 
 export type InvestmentDraft = {
   amount: number | undefined;
   contributionType: ContributionType;
   step: InvestmentStep;
+  // Exploration state lives here too, so it survives the remount caused by hiding/showing values.
+  category: InvestmentCategoryId;
+  period: RankingPeriod;
+  selection: InvestmentSelection | undefined;
+  selectedAssetName: string | undefined;
 };
 
 /** Handoff contract for the next step (#65). `amount` is a canonical decimal string with two places. */
@@ -15,7 +22,15 @@ export type InvestmentHandoff = {
 
 export const maxContributionAmount = 1_000_000;
 
-const initialDraft: InvestmentDraft = { amount: undefined, contributionType: "single", step: "entry" };
+const initialDraft: InvestmentDraft = {
+  amount: undefined,
+  contributionType: "single",
+  step: "entry",
+  category: "stock",
+  period: "3m",
+  selection: undefined,
+  selectedAssetName: undefined,
+};
 
 // Lives in module memory on purpose: it survives the AppShell remount that happens when values are
 // hidden/shown, but it is never written to the URL, localStorage or analytics.

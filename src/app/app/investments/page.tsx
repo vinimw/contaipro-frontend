@@ -4,6 +4,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { ArrowLeft, Info } from "lucide-react";
 
 import { ContributionForm } from "@/components/investments/ContributionForm";
+import { InvestmentExplorer } from "@/components/investments/InvestmentExplorer";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { formatCurrencyBRL } from "@/lib/currency";
@@ -28,6 +29,24 @@ export default function InvestmentsPage() {
     headingRef.current?.focus();
   }, [draft.step]);
 
+  const titles = {
+    entry: "Simule aportes em investimentos",
+    explore: "Escolha o investimento",
+    result: "Ativo selecionado",
+  } as const;
+  const summary = (
+    <dl className="grid gap-3 sm:grid-cols-2">
+      <div>
+        <dt className="text-sm text-slate-500">{draft.contributionType === "monthly" ? "Valor por mês" : "Valor do aporte"}</dt>
+        <dd className="mt-1 text-xl font-extrabold text-slate-900">{formatCurrencyBRL(draft.amount)}</dd>
+      </div>
+      <div>
+        <dt className="text-sm text-slate-500">Tipo de aporte</dt>
+        <dd className="mt-1 text-xl font-extrabold text-slate-900">{draft.contributionType === "monthly" ? "Mensal" : "Único"}</dd>
+      </div>
+    </dl>
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -37,7 +56,7 @@ export default function InvestmentsPage() {
           className="mt-3 font-display text-3xl font-semibold text-slate-950 outline-none"
           tabIndex={-1}
         >
-          {draft.step === "entry" ? "Simule aportes em investimentos" : "Aporte informado"}
+          {titles[draft.step]}
         </h1>
       </div>
 
@@ -51,33 +70,35 @@ export default function InvestmentsPage() {
             </p>
           </Card>
           <Card>
-            <ContributionForm onContinue={() => updateInvestmentDraft({ step: "review" })} />
+            <ContributionForm onContinue={() => updateInvestmentDraft({ step: "explore" })} />
           </Card>
         </>
-      ) : (
+      ) : null}
+
+      {draft.step === "explore" ? (
+        <>
+          <Card>{summary}</Card>
+          <InvestmentExplorer />
+        </>
+      ) : null}
+
+      {draft.step === "result" ? (
         <Card className="space-y-4">
-          <dl className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <dt className="text-sm text-slate-500">{draft.contributionType === "monthly" ? "Valor por mês" : "Valor do aporte"}</dt>
-              <dd className="mt-1 text-xl font-extrabold text-slate-900">{formatCurrencyBRL(draft.amount)}</dd>
-            </div>
-            <div>
-              <dt className="text-sm text-slate-500">Tipo de aporte</dt>
-              <dd className="mt-1 text-xl font-extrabold text-slate-900">
-                {draft.contributionType === "monthly" ? "Mensal" : "Único"}
-              </dd>
-            </div>
-          </dl>
+          {summary}
+          <div>
+            <p className="text-sm text-slate-500">Ativo escolhido</p>
+            <p className="mt-1 text-lg font-bold text-slate-900">{draft.selectedAssetName}</p>
+          </div>
           <p className="text-sm leading-6 text-slate-600">
-            A escolha do tipo de investimento e o resultado da simulação chegam na próxima etapa. Nenhum cálculo
-            foi feito até agora.
+            O resultado da simulação chega na próxima etapa, calculado pela API. Nenhum cálculo foi feito até agora, e a
+            janela do ranking ({draft.selection?.ranking_period}) não é o prazo do investimento.
           </p>
-          <Button variant="ghost" onClick={() => updateInvestmentDraft({ step: "entry" })}>
+          <Button variant="ghost" onClick={() => updateInvestmentDraft({ step: "explore" })}>
             <ArrowLeft className="mr-2 size-4" />
-            Voltar e editar
+            Voltar e escolher outro ativo
           </Button>
         </Card>
-      )}
+      ) : null}
     </div>
   );
 }
