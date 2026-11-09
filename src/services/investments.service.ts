@@ -1,5 +1,6 @@
 import { api, unwrapRequest } from "@/lib/api";
 import type {
+  AssetDetail,
   AssetsResponse,
   CategoriesResponse,
   DataStatus,
@@ -7,6 +8,8 @@ import type {
   RankingCategoryId,
   RankingPeriod,
   RankingResponse,
+  SimulationRequestBody,
+  SimulationResponse,
 } from "@/types/investment";
 
 // All calls are read-only: browsing never triggers a data refresh.
@@ -24,6 +27,13 @@ export const investmentsService = {
         signal,
       }),
     );
+  },
+  asset(id: string, signal?: AbortSignal) {
+    return unwrapRequest<AssetDetail>(api.get(`/investments/assets/${id}`, { signal }));
+  },
+  simulate(body: SimulationRequestBody, signal?: AbortSignal) {
+    // Read-only calculation: nothing is stored and no personal finance data is changed.
+    return unwrapRequest<SimulationResponse>(api.post("/investments/simulations", body, { signal }));
   },
   rankings(params: { category: RankingCategoryId; period: RankingPeriod }, signal?: AbortSignal) {
     return unwrapRequest<RankingResponse>(

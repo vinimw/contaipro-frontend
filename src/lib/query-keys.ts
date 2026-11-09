@@ -33,6 +33,9 @@ export const queryKeys = {
     // Keys carry the selection, base date and dataset version so one selection never reuses another's cache.
     assets: (category: string, page: number, datasetVersion: string | null) =>
       ["investments", "assets", category, page, datasetVersion] as const,
+    asset: (id: string) => ["investments", "asset", id] as const,
+    // The whole request (including dataset_version) is part of the key: one set of inputs, one result.
+    simulation: (body: unknown) => ["investments", "simulation", JSON.stringify(body)] as const,
     ranking: (category: string, period: string, asOf: string, datasetVersion: string | null) =>
       ["investments", "ranking", category, period, asOf, datasetVersion] as const,
   },
