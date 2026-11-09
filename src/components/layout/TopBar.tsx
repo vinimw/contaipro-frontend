@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 
 import { BrandLogo } from "@/components/layout/BrandLogo";
+import { MobileMenu } from "@/components/layout/MobileMenu";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { ValuesVisibilityToggle } from "@/components/layout/ValuesVisibilityToggle";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +18,7 @@ const titles: Record<string, string> = {
   "/app/bills": "Contas fixas",
   "/app/income": "Renda e perfil",
   "/app/expenses": "Gastos rápidos",
+  "/app/investments": "Invista",
   "/app/settings": "Configurações",
 };
 
@@ -32,8 +34,8 @@ export function TopBar() {
   return (
     <header>
       <div className="flex items-center justify-between gap-4 md:hidden">
-        <BrandLogo className="w-32" />
-        <div className="flex items-center gap-2">
+        <BrandLogo className="w-24 min-[375px]:w-32" />
+        <div className="flex items-center gap-1.5 min-[375px]:gap-2">
           <ValuesVisibilityToggle compact />
           <NotificationBell compact />
           <Button
@@ -45,6 +47,7 @@ export function TopBar() {
           >
             <LogOut className="size-5" />
           </Button>
+          <MobileMenu />
         </div>
       </div>
 
