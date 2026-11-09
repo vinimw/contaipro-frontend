@@ -10,14 +10,14 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useInvestmentRanking } from "@/hooks/useInvestments";
 import { formatDateBR } from "@/lib/dates";
-import { emptyReasonLabels, exclusionReasonLabels, formatReturn, periodOptions } from "@/lib/investment-format";
+import { emptyReasonLabels, exclusionReasonLabels, formatReturn, isNetworkError, periodOptions } from "@/lib/investment-format";
 import { queryKeys } from "@/lib/query-keys";
 import type { RankingCategoryId, RankingItem, RankingPeriod } from "@/types/investment";
 
 function errorCopy(error: unknown) {
   const status = (error as { status?: number }).status;
 
-  if (status === undefined || status === 0) {
+  if (isNetworkError(error)) {
     return "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.";
   }
   if (status === 503) {

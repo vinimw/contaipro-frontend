@@ -107,3 +107,118 @@ export type InvestmentSelection = {
   amount: string;
   contribution_type: ContributionType;
 };
+
+export type CdbCondition = {
+  product_identifier: string;
+  name: string;
+  modality: string;
+  index_code: string | null;
+  contracted_rate: string | null;
+  minimum_amount: string | null;
+  grace_period_days: number | null;
+  liquidity: string;
+  maturity_date: string | null;
+  eligibility: string | null;
+  effective_from: string;
+  effective_to: string | null;
+  source_url: string;
+  verified_at: string;
+};
+
+export type AssetDetail = CatalogMetadata & {
+  id: string;
+  ticker: string | null;
+  name: string;
+  category: InvestmentCategoryId;
+  currency: string;
+  issuer: string | null;
+  available: boolean;
+  supports_historical: boolean;
+  supports_projection: boolean;
+  supports_reinvestment: boolean;
+  series_type: string | null;
+  coverage_start: string | null;
+  coverage_end: string | null;
+  unit_rule: string | null;
+  restrictions: string | null;
+  cdb_conditions: CdbCondition[] | null;
+};
+
+export type SimulationMode = "historical" | "projection";
+export type SimulationHorizon = 1 | 3 | 6 | 12;
+
+/** Body of POST /investments/simulations. Money and rates are decimal strings (fractions for rates). */
+export type SimulationRequestBody = {
+  asset_id: string;
+  amount: string;
+  contribution_type: ContributionType;
+  period_months: SimulationHorizon;
+  mode: SimulationMode;
+  reinvest_distributions: boolean;
+  as_of?: string;
+  projection_assumptions?: { annual_return?: string; annual_cdi?: string };
+  dataset_version?: string;
+};
+
+export type SimulationLot = {
+  contribution_date: string;
+  redemption_date: string;
+  calendar_days: number;
+  principal: string;
+  gross_gain: string;
+  iof_rate: string | null;
+  iof: string | null;
+  ir_rate: string | null;
+  ir: string | null;
+  fees: string | null;
+  net_amount: string | null;
+  product_terms_version: string;
+};
+
+export type SimulationResponse = {
+  mode: SimulationMode;
+  asset_id: string;
+  currency: string;
+  amount: string;
+  contribution_type: ContributionType;
+  period_months: number;
+  reinvest_distributions: boolean;
+  start_date: string;
+  end_date: string;
+  effective_start_date: string | null;
+  effective_end_date: string;
+  total_contributed: string;
+  asset_market_value: string;
+  cash_balance: string;
+  distributions_received: string | null;
+  distributions_reinvested: string | null;
+  price_gain: string | null;
+  gross_final_amount: string;
+  gross_profit: string;
+  fees: string | null;
+  ir: string | null;
+  iof: string | null;
+  net_profit: string | null;
+  final_net_amount: string | null;
+  tax_status: "estimated" | "not_calculated" | "not_applicable";
+  cost_status: "estimated" | "not_calculated" | "not_applicable";
+  contributions: { scheduled_date: string; effective_date: string | null; amount: string }[];
+  timeline: {
+    date: string;
+    type: "contribution" | "distribution" | "reinvestment" | "end";
+    amount: string;
+    units_delta: string | null;
+    units_held: string | null;
+    cash_balance: string | null;
+    market_value: string | null;
+  }[];
+  assumptions: Record<string, string | boolean | null>;
+  warnings: string[];
+  sources: InvestmentSource[];
+  data_reference_date: string;
+  last_successful_update_at: string | null;
+  dataset_version: string;
+  methodology_version: string;
+  tax_rule_version: string | null;
+  lots: SimulationLot[] | null;
+};

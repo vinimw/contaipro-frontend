@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useDataStatus, useInvestmentCategories } from "@/hooks/useInvestments";
 import {
+  defaultSimulation,
   getInvestmentDraft,
   subscribeToInvestmentDraft,
   toCanonicalAmount,
@@ -42,6 +43,8 @@ export function InvestmentExplorer() {
     updateInvestmentDraft({
       step: "result",
       selectedAssetName: name,
+      // A new asset starts a fresh simulation; the horizon is independent from the ranking window.
+      simulation: defaultSimulation,
       selection: {
         asset_id: assetId,
         ranking_period: draft.period,

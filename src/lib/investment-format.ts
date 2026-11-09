@@ -48,3 +48,33 @@ const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short",
 export function formatDateTimeBR(value: string | null) {
   return value ? dateTimeFormatter.format(new Date(value)) : "—";
 }
+
+/** The shared API client reports connection failures as a generic 500 "Network Error"; detect them by message. */
+export function isNetworkError(error: unknown) {
+  const status = (error as { status?: number }).status;
+  const message = error instanceof Error ? error.message : "";
+
+  return status === undefined || status === 0 || /network error|timeout|failed to fetch/i.test(message);
+}
+
+export const assumptionLabels: Record<string, string> = {
+  rounding: "Arredondamento",
+  values: "Valores",
+  exit: "Encerramento",
+  contribution_schedule: "Calendário de aportes",
+  price_track: "Trilha de preço",
+  instrument_units: "Cotas",
+  annual_return: "Retorno anual assumido (fração)",
+  annual_cdi: "CDI anual assumido (fração)",
+  horizon: "Horizonte",
+  product: "Produto",
+  modality: "Modalidade",
+  contracted_rate: "Taxa contratada",
+  liquidity: "Liquidez",
+  grace_period_days: "Carência (dias)",
+  minimum_amount: "Aplicação mínima",
+  product_terms_evidence: "Evidência das condições",
+  product_terms_verified_at: "Condições verificadas em",
+  calendar: "Calendário",
+  tax_basis: "Base tributária",
+};
