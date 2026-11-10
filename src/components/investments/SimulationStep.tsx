@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/Card";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useAssetDetail, useSimulation } from "@/hooks/useInvestments";
 import { getInvestmentDraft, subscribeToInvestmentDraft, updateInvestmentDraft, type SimulationDraft } from "@/lib/investment-draft";
-import { isNetworkError, periodOptions } from "@/lib/investment-format";
+import { isNetworkError, periodLabel } from "@/lib/investment-format";
 import { percentToFraction, todayInBrazil } from "@/lib/investment-money";
 import { queryKeys } from "@/lib/query-keys";
 import { investmentsService } from "@/services/investments.service";
@@ -29,7 +29,8 @@ function validateRate(asset: AssetDetail, draft: SimulationDraft): { error?: str
   const number = Number(typed.trim().replace(",", "."));
 
   if (!typed.trim()) {
-    return { error: "Informe a taxa do cenário para projetar." };
+    // CDI scenarios need an explicit rate; for the others the analysis informs a 12-month return as the default.
+    return field === "annualReturn" ? {} : { error: "Informe a taxa do cenário para projetar." };
   }
   if (fraction === null) {
     return { error: "Use um número em % ao ano, por exemplo 12,5." };
@@ -124,6 +125,13 @@ export function SimulationStep() {
     }
   }, [result, sim.submitted]);
 
+  // Assets without a price history (AI-prepared data) only support projection: start there instead of on a disabled option.
+  useEffect(() => {
+    if (asset && !asset.supports_historical && asset.supports_projection && getInvestmentDraft().simulation.mode === "historical") {
+      updateInvestmentDraft({ simulation: { ...getInvestmentDraft().simulation, mode: "projection" } });
+    }
+  }, [asset]);
+
   function patch(change: Partial<SimulationDraft>) {
     updateInvestmentDraft({ simulation: { ...getInvestmentDraft().simulation, ...change } });
   }
@@ -167,7 +175,7 @@ export function SimulationStep() {
     }
   }, [failed, simulation.error, queryClient]);
 
-  const rankingPeriodLabel = periodOptions.find((option) => option.value === selection?.ranking_period)?.label ?? "";
+  const rankingPeriodLabel = periodLabel(selection?.ranking_period);
   const horizonDiffersFromRanking = Boolean(selection && Number(selection.ranking_period.replace("m", "")) !== sim.months);
 
   let content;

@@ -1,8 +1,8 @@
 // Contracts of the Invista API (#35, #38). Decimal values stay strings and unknown values stay null.
 
 export type InvestmentCategoryId = "stock" | "fii" | "fund" | "cdb" | "other";
-export type RankingCategoryId = "stock" | "fii" | "fund";
-export type RankingPeriod = "1m" | "3m" | "6m" | "12m";
+export type RankingCategoryId = "stock" | "fii" | "fund" | "other";
+export type RankingPeriod = "1m" | "3m" | "6m" | "12m" | "36m" | "60m";
 export type ContributionType = "single" | "monthly";
 
 export type InvestmentSource = {

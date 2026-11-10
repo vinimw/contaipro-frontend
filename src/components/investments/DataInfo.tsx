@@ -59,7 +59,7 @@ export function DataInfo({
           <dd>{formatDateBR(dataReferenceDate)}</dd>
         </div>
         <div>
-          <dt className="font-semibold text-slate-700">Última coleta bem-sucedida</dt>
+          <dt className="font-semibold text-slate-700">Última atualização</dt>
           <dd>{formatDateTimeBR(lastSuccessfulUpdateAt)}</dd>
         </div>
         <div className="sm:col-span-2">
