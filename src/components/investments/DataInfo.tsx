@@ -26,6 +26,19 @@ export function DataStatusBanner({ status }: { status: DataStatus | undefined })
   );
 }
 
+/** Permanent notice: part of the investment data is prepared with AI assistance and may differ from official sources. */
+export function AiDataDisclaimer() {
+  return (
+    <p className="flex items-start gap-2 rounded-[10px] bg-slate-50 p-3 text-xs leading-5 text-slate-600" role="note">
+      <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+      <span>
+        Os dados exibidos são validados, mas podem apresentar variações. Parte da base é gerada com apoio de inteligência artificial.
+        Use como referência e confirme as condições na instituição antes de investir.
+      </span>
+    </p>
+  );
+}
+
 /** Source, reference date (market) and last collection (a different thing), plus API warnings. */
 export function DataInfo({
   sources,
@@ -78,6 +91,7 @@ export function DataInfo({
           ))}
         </ul>
       ) : null}
+      <AiDataDisclaimer />
     </div>
   );
 }

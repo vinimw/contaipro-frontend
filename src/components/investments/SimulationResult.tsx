@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import { Info, TriangleAlert } from "lucide-react";
 
+import { AiDataDisclaimer } from "@/components/investments/DataInfo";
 import { Card } from "@/components/ui/Card";
 import { formatDateBR } from "@/lib/dates";
 import { assumptionLabels, formatDateTimeBR } from "@/lib/investment-format";
@@ -257,6 +258,7 @@ export const SimulationResult = forwardRef<
           ))}
         </ul>
       ) : null}
+      <AiDataDisclaimer />
     </div>
   );
 });
