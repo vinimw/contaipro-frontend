@@ -56,7 +56,7 @@ const initialDraft: InvestmentDraft = {
   contributionType: "single",
   step: "entry",
   category: "stock",
-  period: "3m",
+  period: "12m",
   selection: undefined,
   selectedAssetName: undefined,
   simulation: defaultSimulation,

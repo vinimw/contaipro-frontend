@@ -150,7 +150,9 @@ export function SimulationControls({
             onChange={(event) => onChange(rateField === "annualCdi" ? { annualCdi: event.target.value } : { annualReturn: event.target.value })}
           />
           <p className="text-xs text-slate-500">
-            Você define a taxa: ela é um cenário hipotético, constante, e não vem do ranking nem é uma previsão.
+            {rateField === "annualReturn"
+              ? "Opcional. Se deixar em branco, usamos o retorno de 12 meses informado pela análise do Contaipro. É um cenário hipotético e constante, não uma previsão."
+              : "Você define a taxa: ela é um cenário hipotético, constante, e não vem do ranking nem é uma previsão."}
           </p>
         </div>
       ) : null}

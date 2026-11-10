@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { useInvestmentRanking } from "@/hooks/useInvestments";
 import { formatDateBR } from "@/lib/dates";
-import { emptyReasonLabels, exclusionReasonLabels, formatReturn, isNetworkError, periodOptions } from "@/lib/investment-format";
+import { emptyReasonLabels, exclusionReasonLabels, formatReturn, isNetworkError, periodLabel } from "@/lib/investment-format";
 import { queryKeys } from "@/lib/query-keys";
 import type { RankingCategoryId, RankingItem, RankingPeriod } from "@/types/investment";
 
@@ -85,8 +85,9 @@ export function RankingPanel({
     return <RankingSkeleton />;
   }
 
-  const period_label = periodOptions.find((option) => option.value === current.period)?.label ?? current.period;
+  const period_label = periodLabel(current.period);
   const exclusions = Object.entries(current.exclusion_reasons);
+  const isAi = current.methodology_version.startsWith("ranking-lite");
 
   return (
     <div className="space-y-4">
@@ -106,7 +107,7 @@ export function RankingPanel({
                 </div>
                 <div className="sm:text-right">
                   <p className="text-lg font-extrabold text-slate-900">{formatReturn(item.total_return)}</p>
-                  <p className="text-xs text-slate-500">retorno histórico bruto · {period_label}</p>
+                  <p className="text-xs text-slate-500">{isAi ? "retorno informado pela análise" : "retorno histórico bruto"} · {period_label}</p>
                   {item.price_return !== null && item.distribution_return !== null ? (
                     <p className="text-xs text-slate-500">
                       preço {formatReturn(item.price_return)} · proventos {formatReturn(item.distribution_return)}
@@ -130,9 +131,11 @@ export function RankingPanel({
       <div className="space-y-2 text-xs leading-5 text-slate-600">
         <p>
           Janela de {period_label}
-          {current.effective_start_date && current.effective_end_date
-            ? `: de ${formatDateBR(current.effective_start_date)} a ${formatDateBR(current.effective_end_date)} (últimos pregões disponíveis).`
-            : " sem histórico suficiente para definir as datas."}{" "}
+          {isAi
+            ? ": retornos informados pela análise do Contaipro, sem cálculo próprio."
+            : current.effective_start_date && current.effective_end_date
+              ? `: de ${formatDateBR(current.effective_start_date)} a ${formatDateBR(current.effective_end_date)} (últimos pregões disponíveis).`
+              : " sem histórico suficiente para definir as datas."}{" "}
           {current.eligible_count} de {current.universe_size} ativos do universo coberto {current.eligible_count === 1 ? "é elegível" : "são elegíveis"}
           {current.excluded_count ? `; ${current.excluded_count} ${current.excluded_count === 1 ? "foi excluído" : "foram excluídos"}` : ""}. Metodologia {current.methodology_version}.
         </p>

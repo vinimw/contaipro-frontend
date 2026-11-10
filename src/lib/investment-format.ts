@@ -7,22 +7,36 @@ export const periodOptions: { value: RankingPeriod; label: string }[] = [
   { value: "12m", label: "12 meses" },
 ];
 
+/** Windows of the returns informed by the Contaipro analysis. */
+export const rankingPeriodOptions: { value: RankingPeriod; label: string }[] = [
+  { value: "12m", label: "12 meses" },
+  { value: "36m", label: "3 anos" },
+  { value: "60m", label: "5 anos" },
+];
+
+export function periodLabel(value: string | undefined): string {
+  return [...rankingPeriodOptions, ...periodOptions].find((option) => option.value === value)?.label ?? value ?? "";
+}
+
 export const exclusionReasonLabels: Record<string, string> = {
   unadjusted_series: "série sem ajuste",
   fund_methodology_unknown: "fundo sem metodologia comparável",
   insufficient_history: "histórico insuficiente na janela",
   delisted_or_suspended: "sem preço na data final (deslistado ou suspenso)",
   amortization_in_window: "amortização no período",
+  period_not_informed: "retorno não informado para este período",
+  period_unavailable_for_ai_data: "período indisponível para a análise",
 };
 
 export const emptyReasonLabels: Record<string, string> = {
   no_assets_covered: "Ainda não há ativos desta categoria no universo coberto pelos dados.",
   no_eligible_assets: "Nenhum ativo tem histórico completo para esta janela.",
+  period_unavailable_for_ai_data: "A análise informa retornos de 12 meses, 3 anos e 5 anos. Escolha uma dessas janelas.",
 };
 
 export const categoryHints: Partial<Record<InvestmentCategoryId, string>> = {
   cdb: "CDBs mostram as condições verificadas e vigentes; não há ranking por rentabilidade.",
-  other: "Esta categoria lista os produtos disponíveis, sem ranking por rentabilidade.",
+  other: "Esta categoria lista os produtos disponíveis.",
 };
 
 const percentFormatter = new Intl.NumberFormat("pt-BR", {

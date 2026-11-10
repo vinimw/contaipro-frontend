@@ -1,15 +1,15 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { periodOptions } from "@/lib/investment-format";
+import { rankingPeriodOptions } from "@/lib/investment-format";
 import type { RankingPeriod } from "@/types/investment";
 
 export function PeriodSelector({ value, onChange }: { value: RankingPeriod; onChange: (period: RankingPeriod) => void }) {
   return (
     <fieldset className="space-y-2">
-      <legend className="text-sm font-medium text-slate-700">Janela histórica do ranking</legend>
-      <div className="grid grid-cols-4 gap-2" role="radiogroup">
-        {periodOptions.map((option) => {
+      <legend className="text-sm font-medium text-slate-700">Janela do retorno exibido</legend>
+      <div className="grid grid-cols-3 gap-2" role="radiogroup">
+        {rankingPeriodOptions.map((option) => {
           const selected = value === option.value;
 
           return (
@@ -36,7 +36,7 @@ export function PeriodSelector({ value, onChange }: { value: RankingPeriod; onCh
         })}
       </div>
       <p className="text-xs text-slate-500">
-        Esta janela só define o período do histórico exibido no ranking; ela não é o prazo do seu investimento.
+        Esta janela só define o período do retorno exibido no ranking; ela não é o prazo do seu investimento.
       </p>
     </fieldset>
   );
